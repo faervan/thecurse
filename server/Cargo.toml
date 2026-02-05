@@ -1,0 +1,11 @@
+[package]
+name = "thecurse_server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[features]
+dev = ["thecurse_core/dev"]
+
+[dependencies]
+thecurse_core.workspace = true
