@@ -5307,6 +5307,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bevy-inspector-egui",
+ "bitflags 2.10.0",
 ]
 
 [[package]]

@@ -31,6 +31,7 @@ bevy_skein.version = "0.5"
 
 # Useful rust utilities
 thiserror = "2"
+bitflags = "2.10"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 
