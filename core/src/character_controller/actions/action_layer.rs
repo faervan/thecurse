@@ -3,6 +3,7 @@ use bitflags::bitflags;
 use crate::prelude::*;
 
 bitflags! {
+    #[derive(Default, Debug)]
     pub struct ActionLayer: u16 {
         /// Action set containing basic movement
         const Movement = 1;
