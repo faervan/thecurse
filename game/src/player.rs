@@ -20,7 +20,12 @@ struct Player {
     right: ActionIndex,
 }
 
-fn spawn_player(mut commands: Commands, ankor: Single<Entity, With<CameraControllerAnchor>>) {
+fn spawn_player(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    ankor: Single<Entity, With<CameraControllerAnchor>>,
+) {
     let speed = 50.;
     let actions = vec![
         // Forward
@@ -57,17 +62,26 @@ fn spawn_player(mut commands: Commands, ankor: Single<Entity, With<CameraControl
         .set_repeat(),
     ];
     let (controller, _) = CharacterController::from_actions(actions);
-    commands.entity(*ankor).insert((
-        RigidBody::Dynamic,
-        Collider::cuboid(0.5, 2., 0.2),
-        controller,
-        Player {
-            forward: 0,
-            backward: 0,
-            left: 0,
-            right: 0,
-        },
-    ));
+    let id = commands
+        .spawn((
+            Name::new("Player"),
+            Mesh3d(meshes.add(Capsule3d::new(0.3, 2.))),
+            MeshMaterial3d(materials.add(StandardMaterial::from_color(Color::BLACK))),
+            RigidBody::Dynamic,
+            LockedAxes::ROTATION_LOCKED,
+            Collider::cuboid(0.5, 2., 0.2),
+            GravityScale(0.),
+            controller,
+            Player {
+                forward: 0,
+                backward: 1,
+                left: 2,
+                right: 3,
+            },
+        ))
+        .id();
+
+    commands.entity(*ankor).insert(ChildOf(id));
 }
 
 fn player_input(

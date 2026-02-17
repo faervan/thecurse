@@ -1,3 +1,4 @@
 pub use thecurse_core::prelude::*;
 
-pub(crate) use crate::AppState;
+pub use crate::AppState;
+pub use crate::scenes::GameScene;

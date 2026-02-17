@@ -11,20 +11,20 @@ pub use translation_graph::TranslationGraph;
 #[reflect(Default)]
 pub struct CharacterAction {
     /// Description of spatial movement that is applied by this action.
-    translation_graph: TranslationGraph,
+    pub translation_graph: TranslationGraph,
     /// Multiplier for the [`TranslationGraph`]. If the action is moving, this would be speed.
-    translation_multiplier: f32,
+    pub translation_multiplier: f32,
     #[reflect(ignore)]
     /// The layer(s) this action belongs to. Also stores info about interruptibility and
     /// cancellability.
-    layer: ActionLayer,
+    pub layer: ActionLayer,
     #[reflect(ignore)]
     /// The action layers that can be active simultaneously to this action.
-    complements: ActionLayer,
+    pub complements: ActionLayer,
     /// Animation to play
-    animation: CharacterAnimation,
+    pub animation: CharacterAnimation,
     /// Timer of this action. Some actions may be interrupted.
-    timer: Timer,
+    pub timer: Timer,
     /// Trigger an entity event at the beginning of the action
     pub pre_event: Option<CharacterActionEvent>,
     /// Trigger an entity event at the end of the action
@@ -75,7 +75,7 @@ impl CharacterAction {
     pub fn tick_action(&mut self, translation: &mut Vec3, time: &Time) -> bool {
         let delta = time.delta_secs() / self.timer.duration().as_secs_f32();
         let change = self.translation_graph.run_step(delta);
-        *translation += change;
+        *translation += change * self.translation_multiplier;
         self.timer.tick(time.delta());
         self.timer.is_finished() && self.timer.mode() == TimerMode::Once
     }

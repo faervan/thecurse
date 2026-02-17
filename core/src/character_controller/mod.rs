@@ -45,9 +45,9 @@ impl CharacterController {
 
 fn character_movement(
     time: Res<Time>,
-    query: Query<(&mut CharacterController, &mut LinearVelocity)>,
+    query: Query<(&mut CharacterController, &Transform, &mut LinearVelocity)>,
 ) {
-    for (mut controller, mut velocity) in query {
+    for (mut controller, transform, mut velocity) in query {
         let mut v = Vec3::ZERO;
         for action_index in controller.active_actions.clone().into_iter() {
             let action = &mut controller.actions[action_index];
@@ -56,6 +56,6 @@ fn character_movement(
                 controller.active_actions.remove(&action_index);
             }
         }
-        velocity.0 = v;
+        velocity.0 = transform.rotation * v;
     }
 }
