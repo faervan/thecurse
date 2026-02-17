@@ -11,29 +11,59 @@ authors = ["faervan <faervan@proton.me>"]
 thecurse_core.path = "core"
 
 # Bevy & plugins
-bevy = { version = "0.18", default-features = false, features = ["3d"] }
+bevy = { version = "0.18", default-features = false, features = [
+  "3d",
+  "serialize",
+] }
 avian3d = { version = "0.5", default-features = false, features = [
   # Default
   "3d",
   "f32",
   "parry-f32",
+  "collider-from-mesh",
   "bevy_scene",
   "bevy_picking",
   "debug-plugin",
   "parallel",
   # Non-default
   "simd",
+  "serialize",
 ] }
+bevy_skein.version = "0.5"
 
 # Dev dependencies
+egui = "0.33"
+egui_dock = "0.18"
+bevy_egui.version = "0.39"
 bevy-inspector-egui.version = "0.36"
-bevy_skein.version = "0.5"
+
+# Logging
+# Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
+log = { version = "0.4", features = [
+  "max_level_debug",
+  "release_max_level_warn",
+] }
+tracing = { version = "0.1", features = [
+  "max_level_debug",
+  "release_max_level_warn",
+] }
 
 # Useful rust utilities
 thiserror = "2"
 bitflags = "2.10"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
+rand = "0.10"
+
+[workspace.lints.rust]
+# Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+
+[workspace.lints.clippy]
+too_many_arguments = "allow"
+type_complexity = "allow"
+# Make sure macros use their standard braces, such as `[]` for `bevy_ecs::children!`.
+nonstandard_macro_braces = "warn"
 
 [profile.dev]
 codegen-units = 512

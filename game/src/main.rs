@@ -1,4 +1,4 @@
-use thecurse_core::{CameraControllerPlugin, CharacterControllerPlugin};
+use thecurse_core::{CameraControllerPlugin, CharacterControllerPlugin, asset_plugin};
 
 use crate::prelude::*;
 
@@ -8,14 +8,18 @@ fn main() {
     let mut app = App::new();
 
     // Bevy default plugins
-    app.add_plugins(DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-            title: "The Curse".to_string(),
-            name: Some("thecurse".to_string()),
-            ..Default::default()
-        }),
-        ..Default::default()
-    }));
+    app.add_plugins(
+        DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "The Curse".to_string(),
+                    name: Some("thecurse".to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
+            .set(asset_plugin()),
+    );
 
     // Ecosystem plugins
     app.add_plugins(PhysicsPlugins::default());
