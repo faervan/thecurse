@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
-#[derive(Default, Debug)]
+#[derive(Reflect, Default, Debug)]
+#[reflect(Default)]
 pub enum TranslationGraph {
     #[default]
     None,

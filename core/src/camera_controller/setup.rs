@@ -5,7 +5,7 @@ use crate::{
     prelude::*,
 };
 
-pub fn setup(mut commands: Commands, settings: Res<CameraControllerSettings>) {
+pub fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettings>) {
     let anchor = Vec3::Y;
     // Direction from anchor to the actual camera entity.
     let offset = Vec3::new(5., 6., 5.).normalize();

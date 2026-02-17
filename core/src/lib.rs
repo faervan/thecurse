@@ -2,15 +2,17 @@ pub mod prelude;
 
 pub mod utils;
 
+pub mod debug;
+
 mod shared;
 use bevy::asset::AssetPlugin;
 pub use shared::*;
 
 mod character_controller;
-pub use character_controller::CharacterControllerPlugin;
+pub use character_controller::*;
 
 mod camera_controller;
-pub use camera_controller::CameraControllerPlugin;
+pub use camera_controller::*;
 
 pub fn asset_plugin() -> AssetPlugin {
     #[cfg(not(feature = "dev"))]

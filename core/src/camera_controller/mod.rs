@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 /// Camera spawning
 mod setup;
+pub use setup::spawn_camera;
 
 /// Camera settings
 mod settings;
@@ -37,7 +38,7 @@ where
 {
     fn build(&self, app: &mut App) {
         app.insert_resource(self.settings.clone())
-            .add_systems(OnEnter(self.state), setup::setup)
+            .add_systems(OnEnter(self.state), setup::spawn_camera)
             .add_systems(OnExit(self.state), setup::despawn)
             .add_systems(
                 Update,
