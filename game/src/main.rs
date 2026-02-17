@@ -2,6 +2,7 @@ use thecurse_core::{CameraControllerPlugin, CharacterControllerPlugin, asset_plu
 
 use crate::prelude::*;
 
+mod player;
 mod prelude;
 
 fn main() {
@@ -26,8 +27,10 @@ fn main() {
 
     // Custom plugins
     app.add_plugins((
+        thecurse_core::debug::plugin,
         CameraControllerPlugin::<AppState>::default(),
         CharacterControllerPlugin,
+        player::plugin,
     ));
 
     // States
