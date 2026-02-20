@@ -1,4 +1,4 @@
 run:
-	RUST_LOG=info,thecurse=debug,wgpu_hal=warn cargo run -p thecurse_game
+	RUST_LOG=info,thecurse=debug,wgpu_hal=off cargo run -p thecurse_game
 edit:
-	RUST_LOG=info,thecurse=debug,wgpu_hal=warn cargo run -p thecurse_editor
+	RUST_LOG=info,thecurse=debug,wgpu_hal=off cargo run -p thecurse_editor
