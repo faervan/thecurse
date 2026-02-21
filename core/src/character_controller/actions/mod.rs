@@ -1,11 +1,12 @@
 use crate::prelude::*;
 
-mod action_layer;
-pub use action_layer::ActionLayer;
+// use bevy::animation::RepeatAnimation;
 
 mod translation_graph;
-// use bevy::animation::RepeatAnimation;
 pub use translation_graph::TranslationGraph;
+
+mod translation_reference;
+pub use translation_reference::{TranslationReference, TranslationReferenceMask};
 
 #[derive(Reflect, Default, Debug)]
 #[reflect(Default)]
@@ -14,13 +15,8 @@ pub struct CharacterAction {
     pub translation_graph: TranslationGraph,
     /// Multiplier for the [`TranslationGraph`]. If the action is moving, this would be speed.
     pub translation_multiplier: f32,
-    #[reflect(ignore)]
-    /// The layer(s) this action belongs to. Also stores info about interruptibility and
-    /// cancellability.
-    pub layer: ActionLayer,
-    #[reflect(ignore)]
-    /// The action layers that can be active simultaneously to this action.
-    pub complements: ActionLayer,
+    pub transition_reference: TranslationReference,
+    pub transition_reference_mask: TranslationReferenceMask,
     /// Animation to play
     pub animation: CharacterAnimation,
     /// Timer of this action. Some actions may be interrupted.
@@ -72,10 +68,37 @@ impl CharacterAction {
     }
 
     /// Run the [`CharacterAction`] for the current frame, returning whether it finished
-    pub fn tick_action(&mut self, translation: &mut Vec3, time: &Time) -> bool {
+    pub fn tick_action(
+        &mut self,
+        own_transform: &Transform,
+        other_transforms: &Query<&Transform>,
+        translation: &mut Vec3,
+        time: &Time,
+    ) -> bool {
+        let mut forward = match self.transition_reference {
+            TranslationReference::Local => own_transform.forward().as_vec3(),
+            TranslationReference::World => Vec3::NEG_Z,
+            TranslationReference::Entity(id) => match other_transforms.get(id) {
+                Ok(transform) => transform.forward().as_vec3(),
+                Err(_) => {
+                    #[cfg(debug_assertions)]
+                    warn!("Failed to get transform of {id}");
+                    Vec3::NEG_Z
+                }
+            },
+        };
+        self.transition_reference_mask.apply_to(&mut forward);
+        match forward == Vec3::ZERO {
+            true => forward = Vec3::NEG_Z,
+            false => forward = forward.normalize(),
+        }
+        let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, forward);
+
         let delta = time.delta_secs() / self.timer.duration().as_secs_f32();
         let change = self.translation_graph.run_step(delta);
-        *translation += change * self.translation_multiplier;
+
+        *translation += rotation * change * self.translation_multiplier;
+
         self.timer.tick(time.delta());
         self.timer.is_finished() && self.timer.mode() == TimerMode::Once
     }
