@@ -1,11 +1,13 @@
 pub mod prelude;
+use prelude::*;
+
+mod assets;
 
 pub mod utils;
 
 pub mod debug;
 
 mod shared;
-use bevy::asset::AssetPlugin;
 pub use shared::*;
 
 mod character_controller;
@@ -13,6 +15,10 @@ pub use character_controller::*;
 
 mod camera_controller;
 pub use camera_controller::*;
+
+pub fn default_plugins(app: &mut App) {
+    app.add_plugins(assets::plugin);
+}
 
 pub fn asset_plugin() -> AssetPlugin {
     #[cfg(not(feature = "dev"))]
