@@ -1,4 +1,6 @@
-use thecurse_core::{CameraControllerPlugin, CharacterControllerPlugin, asset_plugin};
+use thecurse_core::{
+    CameraControllerPlugin, CharacterControllerPlugin, asset_plugin, assets::all_assets_loaded,
+};
 
 use crate::prelude::*;
 
@@ -28,8 +30,9 @@ fn main() {
 
     // Custom plugins
     app.add_plugins((
+        thecurse_core::default_plugins,
         thecurse_core::debug::plugin,
-        CameraControllerPlugin::<AppState>::default(),
+        CameraControllerPlugin::new(AppState::Game),
         CharacterControllerPlugin,
         player::plugin,
         scenes::plugin,
@@ -38,11 +41,22 @@ fn main() {
     // States
     app.init_state::<AppState>();
 
+    app.add_systems(
+        Update,
+        set_state_game.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
+    );
+
     app.run();
 }
 
 #[derive(States, Clone, Copy, Debug, Hash, PartialEq, Eq, Default)]
 pub enum AppState {
     #[default]
+    Loading,
     Game,
+}
+
+fn set_state_game(mut next_state: ResMut<NextState<AppState>>) {
+    dbg!("game");
+    next_state.set(AppState::Game);
 }
