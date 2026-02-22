@@ -1,23 +1,38 @@
-use bevy::asset::AssetPath;
+use bevy::asset::ReflectAsset;
 
 use crate::prelude::*;
 
-#[derive(Resource)]
+#[derive(Resource, Asset, Reflect)]
+#[reflect(Resource, Asset)]
 pub struct GltfLoadingHandle<T>
 where
-    T: GltfAssetPath,
+    T: GltfAssetPath + TypePath + Send + Sync,
 {
+    #[dependency]
     pub handle: Handle<Gltf>,
     _phantom: PhantomData<T>,
 }
 
 pub trait GltfAssetPath {
-    const PATH: AssetPath<'_>;
+    const PATH: &'static str;
+}
+
+impl<T> FromWorld for GltfLoadingHandle<T>
+where
+    T: GltfAssetPath + TypePath + Send + Sync,
+{
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.resource::<AssetServer>();
+        Self {
+            handle: asset_server.load(T::PATH),
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<T> GltfLoadingHandle<T>
 where
-    T: GltfAssetPath,
+    T: GltfAssetPath + TypePath + Send + Sync,
 {
     pub fn get_gltf<'a>(&self, world: &'a World) -> &'a Gltf {
         let gltfs = world.resource::<Assets<Gltf>>();

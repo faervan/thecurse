@@ -5,10 +5,17 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, load_assets);
 }
 
+pub fn all_assets_loaded(loader: Res<LoadingAssetHandles>) -> bool {
+    if !loader.loading.is_empty() {
+        dbg!(loader.loading.len());
+    }
+    loader.loading.is_empty()
+}
+
 type InsertAssetResource = fn(&mut World, UntypedHandle);
 
 #[derive(Resource, Default)]
-struct LoadingAssetHandles {
+pub struct LoadingAssetHandles {
     loading: Vec<(UntypedHandle, InsertAssetResource)>,
 }
 
@@ -23,6 +30,8 @@ impl AssetResourceLoader for App {
     where
         T: Resource + Asset + FromWorld + Send + Sync,
     {
+        self.init_asset::<T>();
+
         let world = self.world_mut();
         let t = T::from_world(world);
         let handle = world.resource::<AssetServer>().add(t);

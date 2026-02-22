@@ -10,4 +10,5 @@ pub use bevy::prelude::*;
 
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::CollisionLayer;
+pub use crate::utils::GltfAnimationExtractionExt as _;
 pub use crate::utils::ResourceTransformHook as _;
