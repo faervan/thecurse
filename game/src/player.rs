@@ -87,7 +87,7 @@ fn spawn_player(
     let id = commands
         .spawn((
             Name::new("Player"),
-            ActionPlayer::new(JumpAction),
+            PlayerController::default(),
             SceneRoot(player_handle.scene.clone()),
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
