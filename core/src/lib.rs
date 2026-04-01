@@ -16,6 +16,8 @@ pub use character_controller::*;
 mod camera_controller;
 pub use camera_controller::*;
 
+pub(crate) mod action_controller;
+
 pub fn default_plugins(app: &mut App) {
     app.add_plugins(assets::plugin);
 }

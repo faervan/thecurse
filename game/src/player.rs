@@ -187,12 +187,13 @@ fn spawn_player(
     let id = commands
         .spawn((
             Name::new("Player"),
+            ActionPlayer::new(JumpAction),
             SceneRoot(player_handle.scene.clone()),
             RigidBody::Dynamic,
             LockedAxes::ROTATION_LOCKED,
             Collider::cuboid(0.5, 2., 0.2),
-            GravityScale(0.),
-            controller,
+            GravityScale(10.),
+            // controller,
             PlayerActions {
                 forward: 0,
                 backward: 1,

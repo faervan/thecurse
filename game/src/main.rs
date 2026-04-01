@@ -4,6 +4,7 @@ use thecurse_core::{
 
 use crate::prelude::*;
 
+mod actions;
 mod player;
 mod prelude;
 mod scenes;
@@ -36,6 +37,7 @@ fn main() {
         CharacterControllerPlugin,
         player::plugin,
         scenes::plugin,
+        actions::plugin,
     ));
 
     // States
