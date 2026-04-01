@@ -1,6 +1,4 @@
-use thecurse_core::{
-    CameraControllerPlugin, CharacterControllerPlugin, asset_plugin, assets::all_assets_loaded,
-};
+use thecurse_core::{CameraControllerPlugin, asset_plugin, assets::all_assets_loaded};
 
 use crate::prelude::*;
 
@@ -34,7 +32,6 @@ fn main() {
         thecurse_core::default_plugins,
         thecurse_core::debug::plugin,
         CameraControllerPlugin::new(AppState::Game),
-        CharacterControllerPlugin,
         player::plugin,
         scenes::plugin,
         actions::plugin,

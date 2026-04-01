@@ -10,9 +10,6 @@ pub mod debug;
 mod shared;
 pub use shared::*;
 
-mod character_controller;
-pub use character_controller::*;
-
 mod camera_controller;
 pub use camera_controller::*;
 
