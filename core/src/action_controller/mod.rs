@@ -13,6 +13,7 @@ where
 {
     app.add_message::<ActionStart<A>>();
     app.add_message::<ActionStop<A>>();
+    app.add_message::<ActionChange<A>>();
 
     app.add_systems(
         PostUpdate,
@@ -20,6 +21,7 @@ where
             announce_action_state_changes::<A>,
             apply_action_start::<A>.after(announce_action_state_changes::<A>),
             apply_action_stop::<A>.after(announce_action_state_changes::<A>),
+            apply_action_change::<A>.after(announce_action_state_changes::<A>),
         ),
     );
 }
@@ -30,8 +32,9 @@ pub struct ActionPlayer<A>
 where
     A: Action,
 {
-    action: A,
+    pub action: A,
     state: ActionState,
+    run_change_callback: bool,
 }
 
 #[derive(Reflect, Default)]
@@ -52,6 +55,7 @@ where
         Self {
             action,
             state: ActionState::Inactive,
+            run_change_callback: false,
         }
     }
 
@@ -69,6 +73,21 @@ where
     pub fn is_active(&self) -> bool {
         matches!(self.state, ActionState::Active)
     }
+
+    #[inline]
+    pub fn run_change_callback(&mut self) {
+        self.run_change_callback = true;
+    }
+}
+
+impl<A> Default for ActionPlayer<A>
+where
+    A: Action + Default,
+{
+    #[inline]
+    fn default() -> Self {
+        Self::new(A::default())
+    }
 }
 
 pub type ActionId = TypeId;
@@ -79,19 +98,33 @@ pub trait Action: Any + Send + Sync {
 
     type ActionStartParam<'w, 's>: SystemParam;
     type ActionStartQuery: QueryData;
+    #[allow(unused_variables)]
     fn on_action_start<'w, 's>(
         &mut self,
         query: <Self::ActionStartQuery as QueryData>::Item<'_, '_>,
         params: StaticSystemParam<Self::ActionStartParam<'w, 's>>,
-    );
+    ) {
+    }
 
     type ActionStopParam<'w, 's>: SystemParam;
     type ActionStopQuery: QueryData;
+    #[allow(unused_variables)]
     fn on_action_stop<'w, 's>(
         &mut self,
         query: <Self::ActionStopQuery as QueryData>::Item<'_, '_>,
         params: StaticSystemParam<Self::ActionStopParam<'w, 's>>,
-    );
+    ) {
+    }
+
+    type ActionChangeParam<'w, 's>: SystemParam;
+    type ActionChangeQuery: QueryData;
+    #[allow(unused_variables)]
+    fn on_change<'w, 's>(
+        &mut self,
+        query: <Self::ActionChangeQuery as QueryData>::Item<'_, '_>,
+        params: StaticSystemParam<Self::ActionChangeParam<'w, 's>>,
+    ) {
+    }
 }
 
 pub trait RegisterActionExt {
@@ -144,6 +177,7 @@ fn announce_action_state_changes<A>(
     players: Query<(Entity, &ActionPlayer<A>)>,
     mut start_writer: MessageWriter<ActionStart<A>>,
     mut stop_writer: MessageWriter<ActionStop<A>>,
+    mut change_writer: MessageWriter<ActionChange<A>>,
 ) where
     A: Action,
 {
@@ -162,6 +196,12 @@ fn announce_action_state_changes<A>(
                 });
             }
             _ => {}
+        }
+        if player.run_change_callback {
+            change_writer.write(ActionChange {
+                player_id,
+                _phantom: PhantomData,
+            });
         }
     }
 }
@@ -242,5 +282,48 @@ fn apply_action_stop<A>(
     {
         player.state = ActionState::Active;
         player.action.on_action_stop(query, params);
+    }
+}
+
+#[derive(Message)]
+struct ActionChange<A>
+where
+    A: Action,
+{
+    player_id: Entity,
+    _phantom: PhantomData<A>,
+}
+
+#[derive(SystemParam)]
+struct ApplyActionChangeParams<'w, 's, A>
+where
+    A: Action,
+{
+    players: Query<
+        'w,
+        's,
+        (
+            &'static mut ActionPlayer<A>,
+            <A as Action>::ActionChangeQuery,
+        ),
+    >,
+    reader: MessageReader<'w, 's, ActionChange<A>>,
+    params: StaticSystemParam<'w, 's, <A as Action>::ActionChangeParam<'static, 'static>>,
+}
+
+fn apply_action_change<A>(
+    ApplyActionChangeParams {
+        mut players,
+        mut reader,
+        params,
+    }: ApplyActionChangeParams<'_, '_, A>,
+) where
+    A: Action,
+{
+    if let Some(ActionChange { player_id, .. }) = reader.read().next()
+        && let Ok((mut player, query)) = players.get_mut(*player_id)
+    {
+        player.run_change_callback = false;
+        player.action.on_change(query, params);
     }
 }

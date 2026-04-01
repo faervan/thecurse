@@ -10,8 +10,8 @@ pub struct JumpAction;
 impl Action for JumpAction {
     const CANCELS: &[ActionId] = &[];
 
-    type ActionStartParam<'w, 's> = Commands<'w, 's>;
     type ActionStartQuery = (&'static Name, &'static mut LinearVelocity);
+    type ActionStartParam<'w, 's> = Commands<'w, 's>;
     fn on_action_start<'w, 's>(
         &mut self,
         (name, mut velocity): <Self::ActionStartQuery as QueryData>::Item<'_, '_>,
@@ -23,12 +23,9 @@ impl Action for JumpAction {
         }
     }
 
-    type ActionStopParam<'w, 's> = ();
     type ActionStopQuery = ();
-    fn on_action_stop<'w, 's>(
-        &mut self,
-        _query: <Self::ActionStopQuery as QueryData>::Item<'_, '_>,
-        _params: StaticSystemParam<Self::ActionStopParam<'w, 's>>,
-    ) {
-    }
+    type ActionStopParam<'w, 's> = ();
+
+    type ActionChangeQuery = ();
+    type ActionChangeParam<'w, 's> = ();
 }
