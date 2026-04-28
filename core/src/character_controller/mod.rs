@@ -8,8 +8,7 @@ mod actions;
 pub fn plugin(app: &mut App) {
     app.add_plugins(actions::plugin);
 
-    app.load_assets::<GltfLoadingHandle<PlayerCharacterHandle>>();
-    app.transform_resource_on_add(|world, handle: GltfLoadingHandle<PlayerCharacterHandle>| {
+    app.load_assets_with(|handle: GltfLoadingHandle<PlayerCharacterHandle>, world| {
         let gltf = handle.get_gltf(world);
 
         #[cfg(debug_assertions)]
