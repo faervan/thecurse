@@ -5,7 +5,6 @@ pub(super) fn plugin(app: &mut App) {
         OnEnter(AppState::Game),
         spawn_player.after(thecurse_core::spawn_camera),
     );
-    app.add_systems(Update, player_input);
 }
 
 #[derive(Component, Reflect)]
@@ -13,9 +12,8 @@ pub(super) fn plugin(app: &mut App) {
 struct PlayerAnimationTarget(Entity);
 
 fn spawn_player(mut spawner: MessageWriter<SpawnPlayer>) {
+    debug!("Spawn Player");
     spawner.write(SpawnPlayer {
         position: Vec3::splat(1.),
     });
 }
-
-fn player_input(input: Res<ButtonInput<KeyCode>>) {}

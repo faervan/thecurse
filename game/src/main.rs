@@ -28,7 +28,7 @@ fn main() {
 
     // Custom plugins
     app.add_plugins((
-        thecurse_core::default_plugins,
+        thecurse_core::default_plugins(AppState::Game),
         thecurse_core::debug::plugin,
         CameraControllerPlugin::new(AppState::Game),
         player::plugin,

@@ -2,8 +2,8 @@ use bevy::asset::ReflectAsset;
 
 use crate::prelude::*;
 
-#[derive(Resource, Asset, Reflect)]
-#[reflect(Resource, Asset)]
+#[derive(Asset, Reflect)]
+#[reflect(Asset)]
 pub struct GltfLoadingHandle<T>
 where
     T: GltfAssetPath + TypePath + Send + Sync,
