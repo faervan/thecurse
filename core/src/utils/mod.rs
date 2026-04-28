@@ -1,8 +1,7 @@
-mod follow;
-pub use follow::*;
+pub mod follow;
 
-mod resource_hook;
-pub use resource_hook::*;
+pub mod resource_hook;
 
-mod gltf_loading;
-pub use gltf_loading::*;
+pub mod gltf_loading;
+
+pub mod gltf_instance_hooks;

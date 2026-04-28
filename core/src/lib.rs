@@ -17,7 +17,7 @@ mod camera_controller;
 pub use camera_controller::*;
 
 pub fn default_plugins(app: &mut App) {
-    app.add_plugins(assets::plugin);
+    app.add_plugins((assets::plugin, character_controller::plugin));
 }
 
 pub fn asset_plugin() -> AssetPlugin {

@@ -10,5 +10,8 @@ pub use bevy::prelude::*;
 
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::CollisionLayer;
-pub use crate::utils::GltfAnimationExtractionExt as _;
-pub use crate::utils::ResourceTransformHook as _;
+pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
+pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
+pub use crate::utils::resource_hook::ResourceTransformHook as _;
+
+pub use crate::character_controller::SpawnPlayer;
