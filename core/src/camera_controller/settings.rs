@@ -33,7 +33,7 @@ impl Default for CameraControllerSettings {
             zoom_speed: 1.2,
             touch_scroll_speed: 0.5,
             zoom_recovery_speed: 3.,
-            y_range: -0.1..0.9,
+            y_range: 0.1..0.9,
             rotation_speed: Vec2::new(2., 0.5),
         }
     }

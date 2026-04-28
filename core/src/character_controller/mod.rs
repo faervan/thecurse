@@ -111,7 +111,7 @@ fn spawn_player(
                 Transform::from_translation(spawn.position),
                 RigidBody::Dynamic,
                 LockedAxes::ROTATION_LOCKED,
-                Collider::cuboid(0.5, 2., 0.2),
+                Collider::cuboid(0.5, 1.81, 0.2),
                 GravityScale(10.),
             ))
             .observe(on_ready_insert_animation_target);

@@ -15,6 +15,9 @@ pub struct MovementState {
     pub direction: Vec3,
 }
 
+const MOVEMENT_SPEED: f32 = 10.;
+const MOVEMENT_ANIMATION_SPEED: f32 = 1. + MOVEMENT_SPEED * 0.1;
+
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,
     query: Query<
@@ -71,7 +74,7 @@ fn movement_input(
             Quat::from_rotation_arc(Vec3::NEG_Z, camera.translation.with_y(0.).normalize());
         transform.rotate_y((-dir.x).atan2(-dir.z));
 
-        dir = camera.rotation * dir.normalize() * 20.;
+        dir = camera.rotation * dir.normalize() * MOVEMENT_SPEED;
 
         if *aerial != AerialState::Grounded {
             dir *= 0.5;
@@ -96,6 +99,7 @@ fn movement_changes(
             } else {
                 transitions
                     .play(&mut player, character.running, Duration::from_millis(100))
+                    .set_speed(MOVEMENT_ANIMATION_SPEED)
                     .repeat();
             }
         }
