@@ -6,7 +6,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             Update,
             (
                 update_aerial_state,
-                aerial_changed.after(update_aerial_state),
+                aerial_changes.after(update_aerial_state),
             )
                 .run_if(in_state(game_state)),
         );
@@ -49,7 +49,7 @@ fn update_aerial_state(
     }
 }
 
-fn aerial_changed(
+fn aerial_changes(
     changed: Query<(&AerialState, &GltfAnimationTarget), Changed<AerialState>>,
     mut players: Query<(&mut AnimationTransitions, &mut AnimationPlayer)>,
     character: Res<PlayerCharacterHandle>,

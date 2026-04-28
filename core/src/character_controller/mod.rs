@@ -17,6 +17,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
             let (graph, clips) = match gltf.get_animations(|get| {
                 get("Idle")?;
+                get("Running")?;
                 get("Jumping")?;
                 get("Falling")?;
 
@@ -63,6 +64,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             PlayerCharacterHandle {
                 scene,
                 idle: clips["Idle"],
+                running: clips["Running"],
                 jumping: clips["Jumping"],
                 falling: clips["Falling"],
             }
@@ -77,6 +79,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 pub struct PlayerCharacterHandle {
     scene: Handle<Scene>,
     idle: AnimationNodeIndex,
+    running: AnimationNodeIndex,
     jumping: AnimationNodeIndex,
     falling: AnimationNodeIndex,
 }
