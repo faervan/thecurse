@@ -1,7 +1,4 @@
-use crate::{
-    camera_controller::{CameraController, CameraControllerAnchor, CameraControllerSettings},
-    prelude::*,
-};
+use crate::{camera_controller::CameraControllerSettings, prelude::*};
 
 /// TODO: toggle player visibility
 pub fn enforce(

@@ -3,6 +3,7 @@ use bevy::post_process::bloom::Bloom;
 use crate::{
     camera_controller::{CameraController, CameraControllerAnchor, CameraControllerSettings},
     prelude::*,
+    utils::follow::Follow,
 };
 
 pub fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettings>) {
@@ -40,5 +41,20 @@ pub fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettin
 pub fn despawn(mut commands: Commands, query: Query<Entity, With<CameraControllerAnchor>>) {
     for entity in query {
         commands.entity(entity).despawn();
+    }
+}
+
+pub fn follow_main_character(
+    mut commands: Commands,
+    camera: Query<Entity, With<CameraControllerAnchor>>,
+    query: Query<Entity, Added<MainCharacter>>,
+) {
+    if let Ok(player_entity) = query.single()
+        && let Ok(camera_entity) = camera.single()
+    {
+        commands.entity(camera_entity).insert(Follow {
+            target: player_entity,
+            offset: Vec3::ZERO,
+        });
     }
 }

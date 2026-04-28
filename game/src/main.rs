@@ -54,6 +54,5 @@ pub enum AppState {
 }
 
 fn set_state_game(mut next_state: ResMut<NextState<AppState>>) {
-    dbg!("game");
     next_state.set(AppState::Game);
 }

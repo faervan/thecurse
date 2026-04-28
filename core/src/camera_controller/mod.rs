@@ -43,6 +43,7 @@ where
             .add_systems(
                 Update,
                 (
+                    setup::follow_main_character,
                     movement::zoom,
                     movement::rotate,
                     line_of_sight::enforce

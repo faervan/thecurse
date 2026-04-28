@@ -18,7 +18,11 @@ pub use camera_controller::*;
 
 pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins((assets::plugin, character_controller::plugin(game_state)));
+        app.add_plugins((
+            assets::plugin,
+            utils::follow::FollowUtilPlugin::new(game_state),
+            character_controller::plugin(game_state),
+        ));
     }
 }
 

@@ -17,10 +17,18 @@ pub struct MovementState {
 
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,
-    query: Query<(&mut MovementState, &AerialState, &mut LinearVelocity)>,
-    camera: Single<&Transform, With<Camera3d>>,
+    query: Query<
+        (
+            &mut MovementState,
+            &AerialState,
+            &mut Transform,
+            &mut LinearVelocity,
+        ),
+        Without<CameraController>,
+    >,
+    camera: Single<&Transform, With<CameraController>>,
 ) {
-    for (mut moving, aerial, mut velocity) in query {
+    for (mut moving, aerial, mut transform, mut velocity) in query {
         let any_input =
             input.any_pressed([KeyCode::KeyW, KeyCode::KeyA, KeyCode::KeyS, KeyCode::KeyD]);
 
@@ -55,7 +63,20 @@ fn movement_input(
             moving.direction = dir;
         }
 
-        dir = camera.rotation * dir.normalize_or_zero() * 20.;
+        if dir == Vec3::ZERO {
+            return;
+        }
+
+        transform.rotation =
+            Quat::from_rotation_arc(Vec3::NEG_Z, camera.translation.with_y(0.).normalize());
+        transform.rotate_y((-dir.x).atan2(-dir.z));
+
+        dir = camera.rotation * dir.normalize() * 20.;
+
+        if *aerial != AerialState::Grounded {
+            dir *= 0.5;
+        }
+
         velocity.x = dir.x;
         velocity.z = dir.z;
     }

@@ -14,4 +14,5 @@ pub use crate::utils::gltf_instance_hooks::GltfAnimationTarget;
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
-pub use crate::character_controller::{PlayerCharacterHandle, SpawnPlayer};
+pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
+pub use crate::character_controller::{MainCharacter, PlayerCharacterHandle, SpawnPlayer};

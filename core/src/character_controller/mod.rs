@@ -1,5 +1,5 @@
 use crate::{
-    CameraControllerAnchor, character_controller::actions::CharacterActions, prelude::*,
+    character_controller::actions::CharacterActions, prelude::*,
     utils::gltf_instance_hooks::on_ready_insert_animation_target,
 };
 
@@ -88,6 +88,9 @@ impl GltfAssetPath for PlayerCharacterHandle {
     const PATH: &'static str = "models/Player.glb";
 }
 
+#[derive(Component)]
+pub struct MainCharacter;
+
 #[derive(Message, Debug)]
 pub struct SpawnPlayer {
     pub position: Vec3,
@@ -96,14 +99,14 @@ pub struct SpawnPlayer {
 fn spawn_player(
     mut reader: MessageReader<SpawnPlayer>,
     mut commands: Commands,
-    ankor: Single<Entity, With<CameraControllerAnchor>>,
     player_handle: Res<PlayerCharacterHandle>,
 ) {
     for spawn in reader.read() {
-        let id = commands
+        commands
             .spawn((
                 Name::new("Player"),
                 SceneRoot(player_handle.scene.clone()),
+                MainCharacter,
                 CharacterActions::default(),
                 Transform::from_translation(spawn.position),
                 RigidBody::Dynamic,
@@ -111,9 +114,6 @@ fn spawn_player(
                 Collider::cuboid(0.5, 2., 0.2),
                 GravityScale(10.),
             ))
-            .observe(on_ready_insert_animation_target)
-            .id();
-
-        commands.entity(*ankor).insert(ChildOf(id));
+            .observe(on_ready_insert_animation_target);
     }
 }
