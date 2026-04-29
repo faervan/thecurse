@@ -1,14 +1,21 @@
 use crate::{
-    character_controller::actions::{aerial::AerialState, movement::MovementState},
+    character_controller::actions::{
+        aerial::AerialState, attack::AttackState, movement::MovementState,
+    },
     prelude::*,
 };
 
 mod aerial;
+mod attack;
 mod movement;
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins((movement::plugin(game_state), aerial::plugin(game_state)));
+        app.add_plugins((
+            movement::plugin(game_state),
+            aerial::plugin(game_state),
+            attack::plugin(game_state),
+        ));
     }
 }
 
@@ -16,4 +23,5 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 pub struct CharacterActions {
     pub aerial: AerialState,
     pub movement: MovementState,
+    pub attack: AttackState,
 }

@@ -1,3 +1,6 @@
 /target
 .cargo/config.toml
 rust-toolchain.toml
+
+*.blend1
+*.kra~

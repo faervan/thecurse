@@ -6,10 +6,26 @@ use crate::prelude::*;
 #[reflect(Component)]
 pub struct GltfAnimationTarget(pub Entity);
 
-pub fn on_ready_insert_animation_target(
+impl ChildEntityPointer for GltfAnimationTarget {
+    type Target = AnimationPlayer;
+    fn new(entity: Entity) -> Self {
+        Self(entity)
+    }
+}
+
+/// A [`Component`] that holds the [`Entity`] of a child with some component
+/// [`ChildEntityPointer::Target`].
+/// Used e.g. to get the child entity of a gltf entity that holds the [`AnimationPlayer`].
+pub trait ChildEntityPointer: Component {
+    type Target: Component;
+
+    fn new(entity: Entity) -> Self;
+}
+
+pub fn on_ready_insert_child_pointer<T: ChildEntityPointer>(
     event: On<SceneInstanceReady>,
     mut commands: Commands,
-    query: Query<(Option<&Children>, Has<AnimationPlayer>)>,
+    query: Query<(Option<&Children>, Has<T::Target>)>,
 ) {
     let mut current = vec![event.entity];
 
@@ -19,11 +35,9 @@ pub fn on_ready_insert_animation_target(
             break;
         }
         for entity in std::mem::take(&mut current) {
-            if let Ok((children_maybe, has_player)) = query.get(entity) {
-                if has_player {
-                    commands
-                        .entity(event.entity)
-                        .insert(GltfAnimationTarget(entity));
+            if let Ok((children_maybe, has_t)) = query.get(entity) {
+                if has_t {
+                    commands.entity(event.entity).insert(T::new(entity));
                     break 'outer;
                 }
                 if let Some(children) = children_maybe {

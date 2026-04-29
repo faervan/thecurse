@@ -1,13 +1,11 @@
-use crate::{
-    character_controller::actions::CharacterActions, prelude::*,
-    utils::gltf_instance_hooks::on_ready_insert_animation_target,
-};
+use crate::{character_controller::actions::CharacterActions, prelude::*};
 
 mod actions;
+mod weapon;
 
 pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins(actions::plugin(game_state));
+        app.add_plugins((actions::plugin(game_state), weapon::plugin));
 
         app.load_assets_with(|handle: GltfLoadingHandle<PlayerCharacterHandle>, world| {
             let gltf = handle.get_gltf(world);
@@ -20,6 +18,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
                 get("Running")?;
                 get("Jumping")?;
                 get("Falling")?;
+                get("Attack")?;
 
                 Ok(())
             }) {
@@ -67,6 +66,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
                 running: clips["Running"],
                 jumping: clips["Jumping"],
                 falling: clips["Falling"],
+                attack: clips["Attack"],
             }
         });
 
@@ -82,6 +82,7 @@ pub struct PlayerCharacterHandle {
     running: AnimationNodeIndex,
     jumping: AnimationNodeIndex,
     falling: AnimationNodeIndex,
+    attack: AnimationNodeIndex,
 }
 
 impl GltfAssetPath for PlayerCharacterHandle {
@@ -111,9 +112,10 @@ fn spawn_player(
                 Transform::from_translation(spawn.position),
                 RigidBody::Dynamic,
                 LockedAxes::ROTATION_LOCKED,
-                Collider::cuboid(0.5, 1.81, 0.2),
+                Collider::cuboid(0.5, 1.94, 0.2),
                 GravityScale(10.),
             ))
-            .observe(on_ready_insert_animation_target);
+            .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
+            .observe(on_ready_insert_child_pointer::<weapon::WeaponSocketHandle>);
     }
 }
