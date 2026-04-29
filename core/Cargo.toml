@@ -28,3 +28,6 @@ bitflags.workspace = true
 ron.workspace = true
 serde.workspace = true
 rand.workspace = true
+
+[lints]
+workspace = true

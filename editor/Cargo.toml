@@ -9,3 +9,6 @@ dev = ["thecurse_core/dev"]
 
 [dependencies]
 thecurse_core.workspace = true
+
+[lints]
+workspace = true
