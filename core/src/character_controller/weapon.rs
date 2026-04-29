@@ -31,11 +31,11 @@ struct PlayerWeapons {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-#[component(on_add)]
 pub struct WeaponSocket;
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Deref)]
 #[reflect(Component)]
+#[component(on_add)]
 pub struct WeaponSocketHandle(Entity);
 
 impl ChildEntityPointer for WeaponSocketHandle {
@@ -45,11 +45,47 @@ impl ChildEntityPointer for WeaponSocketHandle {
     }
 }
 
-impl WeaponSocket {
+#[derive(Component, Reflect, Deref)]
+#[reflect(Component)]
+pub struct WeaponColliderHandle(Entity);
+
+impl ChildEntityPointer for WeaponColliderHandle {
+    type Target = WeaponSocket;
+    fn new(entity: Entity) -> Self {
+        Self(entity)
+    }
+}
+
+impl WeaponSocketHandle {
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
+        let socket_entity = world.get::<Self>(hook.entity).unwrap().0;
         let sword = world.resource::<PlayerWeapons>().sword.clone();
+        let mut id = None;
         world
             .commands()
-            .spawn((Name::new("Sword"), SceneRoot(sword), ChildOf(hook.entity)));
+            .spawn((Name::new("Sword"), SceneRoot(sword), ChildOf(socket_entity)))
+            .with_children(|p| {
+                id = Some(
+                    p.spawn((
+                        Transform::from_xyz(0., 4., 0.),
+                        Collider::cuboid(0.5, 5., 0.3),
+                        Sensor,
+                    ))
+                    .observe(
+                        |event: On<CollisionStart>, mut damage: MessageWriter<DealDamage>| {
+                            debug!("Sword {} hit {}", event.collider1, event.collider2);
+                            damage.write(DealDamage {
+                                target: event.collider2,
+                                amount: 5.,
+                            });
+                        },
+                    )
+                    .id(),
+                );
+            });
+        world
+            .commands()
+            .entity(hook.entity)
+            .insert(WeaponColliderHandle(id.unwrap()));
     }
 }

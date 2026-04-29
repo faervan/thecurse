@@ -17,6 +17,8 @@ pub use crate::utils::gltf_instance_hooks::{GltfAnimationTarget, on_ready_insert
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
+pub use crate::creatures::health::{DealDamage, Health};
+
 pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
 pub use crate::character_controller::actions::InterruptAction;
 pub use crate::character_controller::{MainCharacter, PlayerCharacterHandle, SpawnPlayer};

@@ -1,13 +1,11 @@
 pub mod prelude;
 use prelude::*;
 
-pub mod assets;
-
-pub mod utils;
-
 pub mod animation;
-
+pub mod assets;
+pub mod creatures;
 pub mod debug;
+pub mod utils;
 
 mod shared;
 pub use shared::*;
@@ -26,6 +24,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             assets::plugin,
             utils::follow::FollowUtilPlugin::new(game_state),
             animation::AnimationPlugin,
+            creatures::plugin(game_state),
             character_controller::plugin(game_state),
         ));
     }

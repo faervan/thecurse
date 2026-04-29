@@ -1,4 +1,7 @@
-use crate::{character_controller::actions::aerial::AerialState, prelude::*};
+use crate::{
+    character_controller::{actions::aerial::AerialState, weapon::WeaponColliderHandle},
+    prelude::*,
+};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -40,17 +43,31 @@ fn update_attack_state(
 }
 
 fn attack_changes(
-    changed: Query<(&AttackState, &GltfAnimationTarget), Changed<AttackState>>,
+    mut commands: Commands,
+    changed: Query<
+        (&AttackState, &GltfAnimationTarget, &WeaponColliderHandle),
+        Changed<AttackState>,
+    >,
     mut players: Query<(&mut AnimationTransitions, &mut AnimationPlayer)>,
     character: Res<PlayerCharacterHandle>,
 ) {
-    for (attack, target) in changed {
+    for (attack, target, weapon_entity) in changed {
+        let animation = match attack {
+            AttackState::None => {
+                commands
+                    .entity(**weapon_entity)
+                    .remove::<CollisionEventsEnabled>();
+                character.idle
+            }
+            AttackState::Attacking(timer) if timer.elapsed().is_zero() => {
+                commands
+                    .entity(**weapon_entity)
+                    .insert(CollisionEventsEnabled);
+                character.attack
+            }
+            _ => continue,
+        };
         if let Ok((mut transitions, mut player)) = players.get_mut(**target) {
-            let animation = match attack {
-                AttackState::None => character.idle,
-                AttackState::Attacking(timer) if timer.elapsed().is_zero() => character.attack,
-                _ => continue,
-            };
             transitions
                 .play(&mut player, animation, Duration::from_millis(100))
                 .set_speed(2.);
