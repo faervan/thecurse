@@ -4,10 +4,8 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
         app.add_systems(
             Update,
-            (
-                update_attack_state,
-                attack_changes.after(update_attack_state),
-            )
+            ((update_attack_state, handle_interrupts), attack_changes)
+                .chain()
                 .run_if(in_state(game_state)),
         );
     }
@@ -56,6 +54,19 @@ fn attack_changes(
             transitions
                 .play(&mut player, animation, Duration::from_millis(100))
                 .set_speed(2.);
+        }
+    }
+}
+
+fn handle_interrupts(
+    mut interrupts: MessageReader<InterruptAction>,
+    mut query: Query<&mut AttackState, With<MainCharacter>>,
+) {
+    for interrupt in interrupts.read() {
+        for mut aerial in &mut query {
+            match interrupt {
+                InterruptAction::PlayerJumped => *aerial = AttackState::None,
+            }
         }
     }
 }

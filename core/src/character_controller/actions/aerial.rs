@@ -24,6 +24,7 @@ pub enum AerialState {
 
 fn update_aerial_state(
     input: Res<ButtonInput<KeyCode>>,
+    mut interrupt: MessageWriter<InterruptAction>,
     query: Query<(&mut AerialState, &mut LinearVelocity)>,
 ) {
     for (mut aerial, mut velocity) in query {
@@ -35,7 +36,8 @@ fn update_aerial_state(
                     AerialState::Grounded | AerialState::Jumping => {}
                     AerialState::Falling => *aerial = AerialState::Grounded,
                 }
-            } else if jump_pressed && *aerial != AerialState::Jumping {
+            } else if *aerial != AerialState::Jumping {
+                interrupt.write(InterruptAction::PlayerJumped);
                 *aerial = AerialState::Jumping;
                 velocity.y = 40.;
             }

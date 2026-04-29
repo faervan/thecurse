@@ -16,6 +16,8 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             aerial::plugin(game_state),
             attack::plugin(game_state),
         ));
+
+        app.add_message::<InterruptAction>();
     }
 }
 
@@ -24,4 +26,9 @@ pub struct CharacterActions {
     pub aerial: AerialState,
     pub movement: MovementState,
     pub attack: AttackState,
+}
+
+#[derive(Message, Debug)]
+pub enum InterruptAction {
+    PlayerJumped,
 }

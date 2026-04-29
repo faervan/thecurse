@@ -1,6 +1,6 @@
 use crate::{character_controller::actions::CharacterActions, prelude::*};
 
-mod actions;
+pub mod actions;
 mod weapon;
 
 pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
