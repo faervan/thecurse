@@ -99,9 +99,12 @@ fn handle_interrupts(
     mut query: Query<&mut AttackState, With<MainCharacter>>,
 ) {
     for interrupt in interrupts.read() {
-        for mut aerial in &mut query {
+        for mut attack in &mut query {
+            if *attack == AttackState::None {
+                continue;
+            }
             match interrupt {
-                InterruptAction::PlayerJumped => *aerial = AttackState::None,
+                InterruptAction::PlayerJumped => *attack = AttackState::None,
             }
         }
     }
