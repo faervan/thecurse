@@ -54,15 +54,13 @@ fn attack_changes(
     for (attack, target, weapon_entity) in changed {
         let animation = match attack {
             AttackState::None => {
-                commands
-                    .entity(**weapon_entity)
-                    .remove::<CollisionEventsEnabled>();
+                commands.entity(**weapon_entity).remove::<Collider>();
                 character.idle
             }
             AttackState::Attacking(timer) if timer.elapsed().is_zero() => {
                 commands
                     .entity(**weapon_entity)
-                    .insert(CollisionEventsEnabled);
+                    .insert(Collider::cuboid(0.5, 5., 0.3));
                 character.attack
             }
             _ => continue,

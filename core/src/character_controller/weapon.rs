@@ -1,33 +1,24 @@
 use crate::{prelude::*, utils::gltf_instance_hooks::ChildEntityPointer};
 
 pub(super) fn plugin(app: &mut App) {
-    app.load_assets_with(|asset: PlayerWeaponsAsset, world: &mut World| {
-        let gltfs = world.resource::<Assets<Gltf>>();
-        let gltf = gltfs.get(&asset.sword).unwrap();
-        PlayerWeapons {
-            sword: gltf.default_scene.clone().expect("No default scene"),
-        }
-    });
+    app.load_assets_with(
+        |asset: GltfLoadingHandle<PlayerWeapons>, world: &mut World| {
+            let gltfs = world.resource::<Assets<Gltf>>();
+            let gltf = gltfs.get(&asset.handle).unwrap();
+            PlayerWeapons {
+                sword: gltf.default_scene.clone().expect("No default scene"),
+            }
+        },
+    );
 }
 
-#[derive(Asset, TypePath)]
-struct PlayerWeaponsAsset {
-    #[dependency]
-    sword: Handle<Gltf>,
-}
-
-impl FromWorld for PlayerWeaponsAsset {
-    fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource::<AssetServer>();
-        Self {
-            sword: asset_server.load("models/Sword.glb"),
-        }
-    }
-}
-
-#[derive(Resource)]
+#[derive(Resource, TypePath)]
 struct PlayerWeapons {
     sword: Handle<Scene>,
+}
+
+impl GltfAssetPath for PlayerWeapons {
+    const PATH: &'static str = "models/Sword.glb";
 }
 
 #[derive(Component, Reflect)]
@@ -69,8 +60,8 @@ impl WeaponSocketHandle {
                 id = Some(
                     p.spawn((
                         Transform::from_xyz(0., 4., 0.),
-                        Collider::cuboid(0.5, 5., 0.3),
                         Sensor,
+                        CollisionEventsEnabled,
                     ))
                     .observe(
                         |event: On<CollisionStart>, mut damage: MessageWriter<DealDamage>| {
@@ -84,9 +75,10 @@ impl WeaponSocketHandle {
                     .id(),
                 );
             });
+        let id = id.unwrap();
         world
             .commands()
             .entity(hook.entity)
-            .insert(WeaponColliderHandle(id.unwrap()));
+            .insert(WeaponColliderHandle(id));
     }
 }
