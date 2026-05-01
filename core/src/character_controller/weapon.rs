@@ -60,6 +60,7 @@ impl WeaponSocketHandle {
                 id = Some(
                     p.spawn((
                         Transform::from_xyz(0., 4., 0.),
+                        RigidBody::Kinematic,
                         Sensor,
                         CollisionEventsEnabled,
                     ))

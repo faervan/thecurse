@@ -19,7 +19,16 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 pub enum AttackState {
     #[default]
     None,
-    Attacking(Timer),
+    Attacking {
+        timer: Timer,
+        ty: AttackType,
+    },
+}
+
+#[derive(Reflect, Debug, PartialEq)]
+pub enum AttackType {
+    Normal,
+    SwingBottom,
 }
 
 fn update_attack_state(
@@ -29,11 +38,20 @@ fn update_attack_state(
 ) {
     for (mut attack_state, aerial) in query {
         if *attack_state == AttackState::None {
-            if input.pressed(KeyCode::KeyQ) && *aerial == AerialState::Grounded {
-                *attack_state =
-                    AttackState::Attacking(Timer::new(Duration::from_millis(500), TimerMode::Once));
+            if *aerial == AerialState::Grounded {
+                if input.pressed(KeyCode::KeyQ) {
+                    *attack_state = AttackState::Attacking {
+                        timer: Timer::new(Duration::from_millis(500), TimerMode::Once),
+                        ty: AttackType::Normal,
+                    };
+                } else if input.pressed(KeyCode::KeyE) {
+                    *attack_state = AttackState::Attacking {
+                        timer: Timer::new(Duration::from_millis(500), TimerMode::Once),
+                        ty: AttackType::SwingBottom,
+                    };
+                }
             }
-        } else if let AttackState::Attacking(timer) = &mut *attack_state {
+        } else if let AttackState::Attacking { timer, .. } = &mut *attack_state {
             timer.tick(time.delta());
             if timer.just_finished() {
                 *attack_state = AttackState::None;
@@ -57,17 +75,20 @@ fn attack_changes(
                 commands.entity(**weapon_entity).remove::<Collider>();
                 character.idle
             }
-            AttackState::Attacking(timer) if timer.elapsed().is_zero() => {
+            AttackState::Attacking { timer, ty } if timer.elapsed().is_zero() => {
                 commands
                     .entity(**weapon_entity)
                     .insert(Collider::cuboid(0.5, 5., 0.3));
-                character.attack
+                match ty {
+                    AttackType::Normal => character.attack,
+                    AttackType::SwingBottom => character.attack_bottom,
+                }
             }
             _ => continue,
         };
         if let Ok((mut transitions, mut player)) = players.get_mut(**target) {
             transitions
-                .play(&mut player, animation, Duration::from_millis(100))
+                .play(&mut player, animation, Duration::from_millis(200))
                 .set_speed(2.);
         }
     }

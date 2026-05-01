@@ -19,6 +19,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
                 get("Jumping")?;
                 get("Falling")?;
                 get("Attack")?;
+                get("AttackSwingBottom")?;
 
                 Ok(())
             }) {
@@ -67,6 +68,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
                 jumping: clips["Jumping"],
                 falling: clips["Falling"],
                 attack: clips["Attack"],
+                attack_bottom: clips["AttackSwingBottom"],
             }
         });
 
@@ -83,6 +85,7 @@ pub struct PlayerCharacterHandle {
     jumping: AnimationNodeIndex,
     falling: AnimationNodeIndex,
     attack: AnimationNodeIndex,
+    attack_bottom: AnimationNodeIndex,
 }
 
 impl GltfAssetPath for PlayerCharacterHandle {
@@ -114,7 +117,10 @@ fn spawn_player(
                 LockedAxes::ROTATION_LOCKED,
                 Collider::cuboid(0.5, 1.94, 0.2),
                 GravityScale(10.),
-                CollisionLayers::new(CollisionLayer::Creature, CollisionLayer::all_bits()),
+                CollisionLayers::new(
+                    CollisionLayer::Creature,
+                    CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
+                ),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<weapon::WeaponSocketHandle>);

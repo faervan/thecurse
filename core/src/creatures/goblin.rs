@@ -111,7 +111,10 @@ fn spawn_goblins(
                 LockedAxes::ROTATION_LOCKED,
                 Collider::cuboid(0.7, 1.225, 0.21),
                 GravityScale(10.),
-                CollisionLayers::new(CollisionLayer::Creature, CollisionLayer::all_bits()),
+                CollisionLayers::new(
+                    CollisionLayer::Creature,
+                    CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
+                ),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>);
     }
