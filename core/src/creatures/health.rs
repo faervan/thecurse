@@ -29,7 +29,7 @@ fn apply_damage(
     for damage in damage_reader.read() {
         if let Ok(mut health) = query.get_mut(damage.target) {
             **health -= damage.amount;
-            if health.is_sign_negative() {
+            if **health <= 0. {
                 commands.entity(damage.target).despawn();
                 debug!("Entity {} was killed", damage.target);
             }

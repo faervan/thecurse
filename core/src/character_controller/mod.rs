@@ -114,6 +114,7 @@ fn spawn_player(
                 LockedAxes::ROTATION_LOCKED,
                 Collider::cuboid(0.5, 1.94, 0.2),
                 GravityScale(10.),
+                CollisionLayers::new(CollisionLayer::Creature, CollisionLayer::all_bits()),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<weapon::WeaponSocketHandle>);

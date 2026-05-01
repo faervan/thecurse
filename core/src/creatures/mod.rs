@@ -1,10 +1,11 @@
 use crate::prelude::*;
 
+pub mod goblin;
 pub mod health;
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins(health::plugin(game_state));
+        app.add_plugins((health::plugin(game_state), goblin::plugin(game_state)));
 
         app.add_systems(OnEnter(game_state), test);
     }

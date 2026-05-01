@@ -12,6 +12,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Asset, TypePath)]
 struct PlayerWeaponsAsset {
+    #[dependency]
     sword: Handle<Gltf>,
 }
 
