@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, weapon::WeaponSocketHandle};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -125,7 +125,8 @@ fn spawn_goblins(
                 },
                 GoblinBehavior::Idle,
             ))
-            .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>);
+            .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
+            .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
     }
 }
 

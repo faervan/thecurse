@@ -1,7 +1,8 @@
 use crate::{character_controller::actions::CharacterActions, prelude::*};
 
 pub mod actions;
-mod weapon;
+/// TODO! Should not be in character_controller
+pub mod weapon;
 
 pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
