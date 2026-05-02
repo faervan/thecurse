@@ -85,6 +85,10 @@ enum GoblinBehavior {
     Idle,
 }
 
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub(super) struct Goblin;
+
 impl GltfAssetPath for GoblinHandles {
     const PATH: &'static str = "models/Goblin.glb";
 }
@@ -102,19 +106,24 @@ fn spawn_goblins(
     for spawn in spawns.read() {
         commands
             .spawn((
-                Name::new("Goblin"),
+                Goblin,
+                CreatureBundle {
+                    name: Name::new("Goblin"),
+                    health: Health(30.),
+                    scene: SceneRoot(handle.model.clone()),
+                    transform: Transform::from_translation(spawn.position),
+                    collider: Collider::cuboid(0.7, 1.225, 0.21),
+                    ..Default::default()
+                },
+                super::ai::CreatureAiState::default(),
+                super::ai::CreatureThing {
+                    detection_range: 10.,
+                    max_aggro_range: 20.,
+                    target_distance: 2.,
+                    speed: 3.,
+                    hostile_towards: super::ai::CreatureFaction::PLAYER,
+                },
                 GoblinBehavior::Idle,
-                Health(30.),
-                SceneRoot(handle.model.clone()),
-                Transform::from_translation(spawn.position),
-                RigidBody::Dynamic,
-                LockedAxes::ROTATION_LOCKED,
-                Collider::cuboid(0.7, 1.225, 0.21),
-                GravityScale(10.),
-                CollisionLayers::new(
-                    CollisionLayer::Creature,
-                    CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
-                ),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>);
     }

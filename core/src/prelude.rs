@@ -19,7 +19,8 @@ pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
 pub use crate::creatures::goblin::SpawnGoblin;
 pub use crate::creatures::health::{DealDamage, Health};
+pub use crate::creatures::{Creature, CreatureBundle};
 
 pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
 pub use crate::character_controller::actions::InterruptAction;
-pub use crate::character_controller::{MainCharacter, PlayerCharacterHandle, SpawnPlayer};
+pub use crate::character_controller::{MainCharacter, Player, PlayerCharacterHandle, SpawnPlayer};

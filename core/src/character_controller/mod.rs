@@ -92,8 +92,14 @@ impl GltfAssetPath for PlayerCharacterHandle {
     const PATH: &'static str = "models/Player.glb";
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+#[require(Player = Player)]
 pub struct MainCharacter;
+
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct Player;
 
 #[derive(Message, Debug)]
 pub struct SpawnPlayer {
@@ -108,19 +114,15 @@ fn spawn_player(
     for spawn in reader.read() {
         commands
             .spawn((
-                Name::new("Player"),
-                SceneRoot(player_handle.scene.clone()),
                 MainCharacter,
+                CreatureBundle {
+                    name: Name::new("Player"),
+                    scene: SceneRoot(player_handle.scene.clone()),
+                    transform: Transform::from_translation(spawn.position),
+                    collider: Collider::cuboid(0.5, 1.94, 0.2),
+                    ..Default::default()
+                },
                 CharacterActions::default(),
-                Transform::from_translation(spawn.position),
-                RigidBody::Dynamic,
-                LockedAxes::ROTATION_LOCKED,
-                Collider::cuboid(0.5, 1.94, 0.2),
-                GravityScale(10.),
-                CollisionLayers::new(
-                    CollisionLayer::Creature,
-                    CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
-                ),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<weapon::WeaponSocketHandle>);
