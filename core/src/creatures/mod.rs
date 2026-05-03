@@ -44,8 +44,8 @@ impl Default for CreatureBundle {
             rigid_body: RigidBody::Dynamic,
             collider: Collider::cuboid(0.8, 1.8, 0.3),
             layer: CollisionLayers::new(
-                CollisionLayer::Creature,
-                CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
+                GameLayer::CREATURE,
+                GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
             ),
             gravity_scale: GravityScale(10.),
             locked_axes: LockedAxes::ROTATION_LOCKED,
@@ -63,8 +63,8 @@ fn test(mut commands: Commands) {
         RigidBody::Dynamic,
         LockedAxes::ROTATION_LOCKED,
         CollisionLayers::new(
-            CollisionLayer::Creature,
-            CollisionLayer::all_bits() & !CollisionLayer::Creature.to_bits(),
+            GameLayer::GOBLIN,
+            GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
         ),
     ));
 }

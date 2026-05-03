@@ -37,7 +37,6 @@ fn spawn(
         address_mode_v: bevy::image::ImageAddressMode::Repeat,
         ..Default::default()
     });
-
     commands.spawn((
         Name::new("Ground"),
         Transform::default(),
@@ -46,9 +45,10 @@ fn spawn(
             base_color_texture: Some(images.add(image)),
             ..Default::default()
         })),
-        RigidBody::Static,
         children![(
+            RigidBody::Static,
             Collider::cuboid(100., 1., 100.),
+            CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
             Transform::from_xyz(0., -0.5, 0.)
         )],
     ));

@@ -18,7 +18,7 @@ pub fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettin
             ShapeCaster::default()
                 .with_max_distance(0.)
                 .with_max_hits(1)
-                .with_query_filter(SpatialQueryFilter::from_mask(CollisionLayer::Environment)),
+                .with_query_filter(SpatialQueryFilter::from_mask(GameLayer::ENVIRONMENT)),
             Visibility::Visible,
             Transform::from_translation(anchor),
         ))

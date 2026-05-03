@@ -12,7 +12,7 @@ pub use bevy::prelude::*;
 
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
-pub use crate::shared::CollisionLayer;
+pub use crate::shared::GameLayer;
 pub use crate::utils::gltf_instance_hooks::{GltfAnimationTarget, on_ready_insert_child_pointer};
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};

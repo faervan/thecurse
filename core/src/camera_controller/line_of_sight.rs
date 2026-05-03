@@ -39,7 +39,7 @@ pub fn enforce(
                     Dir3::new_unchecked((hit.point1 - camera.1.translation()).normalize()),
                     &ShapeCastConfig::default()
                         .with_max_distance((hit.point1 - camera.1.translation()).length()),
-                    &SpatialQueryFilter::from_mask(CollisionLayer::Environment),
+                    &SpatialQueryFilter::from_mask(GameLayer::ENVIRONMENT),
                 )
                 .is_none_or(|hit| hit.distance == 0.)
             {

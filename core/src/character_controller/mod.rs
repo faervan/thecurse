@@ -121,6 +121,10 @@ fn spawn_player(
                     scene: SceneRoot(player_handle.scene.clone()),
                     transform: Transform::from_translation(spawn.position),
                     collider: Collider::cuboid(0.5, 1.94, 0.2),
+                    layer: CollisionLayers::new(
+                        GameLayer::PLAYER,
+                        GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
+                    ),
                     ..Default::default()
                 },
                 CharacterActions::default(),

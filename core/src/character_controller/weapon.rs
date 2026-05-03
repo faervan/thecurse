@@ -63,6 +63,7 @@ impl WeaponSocketHandle {
                         RigidBody::Kinematic,
                         Sensor,
                         CollisionEventsEnabled,
+                        CollisionLayers::new(GameLayer::WEAPON_MELEE, GameLayer::CREATURE),
                     ))
                     .observe(
                         |event: On<CollisionStart>, mut damage: MessageWriter<DealDamage>| {
