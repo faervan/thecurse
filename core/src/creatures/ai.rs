@@ -47,12 +47,29 @@ bitflags! {
 }
 
 fn update_creature_ai(
-    query: Query<(&mut CreatureAiState, &CreatureThing, &Transform)>,
+    query: Query<(
+        &mut CreatureAiState,
+        &CreatureThing,
+        &Transform,
+        &GltfAnimationTarget,
+    )>,
     players: Query<(Entity, &Transform), With<Player>>,
     goblins: Query<(Entity, &Transform), With<Goblin>>,
     creatures: Query<&Transform, With<Creature>>,
+    time: Res<Time>,
+    mut timer: Local<Option<Timer>>,
+    mut animation_players: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
+    handles: Res<super::goblin::GoblinHandles>,
 ) {
-    for (mut state, thing, creature_transform) in query {
+    if timer.is_none() {
+        *timer = Some(Timer::new(
+            Duration::from_secs_f32(1.),
+            TimerMode::Repeating,
+        ));
+    }
+    let timer = timer.as_mut().unwrap();
+    timer.tick(time.delta());
+    for (mut state, thing, creature_transform, animation_target) in query {
         match &mut *state {
             CreatureAiState::Idle => {
                 if thing.hostile_towards.is_empty() {
@@ -99,6 +116,18 @@ fn update_creature_ai(
                         *state = CreatureAiState::Idle;
                     } else if transform.translation != *position {
                         *position = transform.translation;
+                    } else {
+                        if timer.just_finished()
+                            && let Ok((mut player, mut transitions)) =
+                                animation_players.get_mut(**animation_target)
+                        {
+                            debug!("hello2");
+                            transitions.play(
+                                &mut player,
+                                handles.attack_slash,
+                                Duration::from_millis(100),
+                            );
+                        }
                     }
                 }
                 Err(_) => {
@@ -122,10 +151,13 @@ fn move_towards_target(
         let CreatureAiState::Aggro { position, .. } = *state else {
             return;
         };
-        let mut direction = (position - transform.translation).with_y(0.);
+        let direction = (position - transform.translation).with_y(0.);
         transform.look_to(-direction, Vec3::Y);
         if direction.length() <= thing.target_distance {
-            direction = Vec3::ZERO;
+            if velocity.0 != Vec3::ZERO {
+                velocity.0 = Vec3::ZERO;
+            }
+            continue;
         }
         velocity.0 = direction.normalize_or_zero() * thing.speed;
     }

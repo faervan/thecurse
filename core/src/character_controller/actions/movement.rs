@@ -19,6 +19,7 @@ pub struct MovementState {
 
 const MOVEMENT_SPEED: f32 = 10.;
 const MOVEMENT_ANIMATION_SPEED: f32 = 1. + MOVEMENT_SPEED * 0.1;
+const AERIAL_MOVEMENT_FACTOR: f32 = 0.8;
 
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,
@@ -81,7 +82,7 @@ fn movement_input(
         }
 
         if *aerial != AerialState::Grounded {
-            dir *= 0.5;
+            dir *= AERIAL_MOVEMENT_FACTOR;
         }
 
         let past = transform.rotation;
@@ -110,7 +111,7 @@ fn movement_input(
         dir = camera.rotation * dir.normalize() * MOVEMENT_SPEED;
 
         if *aerial != AerialState::Grounded {
-            dir *= 0.5;
+            dir *= AERIAL_MOVEMENT_FACTOR;
         }
 
         velocity.x = dir.x;

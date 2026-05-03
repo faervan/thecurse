@@ -11,6 +11,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
             let (graph, clips) = match gltf.get_animations(|get| {
                 get("Idle")?;
+                get("AttackSlash")?;
 
                 Ok(())
             }) {
@@ -55,6 +56,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             GoblinHandles {
                 model: scene,
                 idle: clips["Idle"],
+                attack_slash: clips["AttackSlash"],
             }
         });
 
@@ -73,9 +75,10 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 }
 
 #[derive(Resource, TypePath)]
-struct GoblinHandles {
+pub(super) struct GoblinHandles {
     model: Handle<Scene>,
     idle: AnimationNodeIndex,
+    pub attack_slash: AnimationNodeIndex,
 }
 
 #[derive(Component, Debug, Default, Reflect)]
