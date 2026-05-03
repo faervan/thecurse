@@ -75,10 +75,10 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 }
 
 #[derive(Resource, TypePath)]
-pub(super) struct GoblinHandles {
+struct GoblinHandles {
     model: Handle<Scene>,
     idle: AnimationNodeIndex,
-    pub attack_slash: AnimationNodeIndex,
+    attack_slash: AnimationNodeIndex,
 }
 
 #[derive(Component, Debug, Default, Reflect)]
@@ -90,7 +90,7 @@ enum GoblinBehavior {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub(super) struct Goblin;
+struct Goblin;
 
 impl GltfAssetPath for GoblinHandles {
     const PATH: &'static str = "models/Goblin.glb";
@@ -116,20 +116,45 @@ fn spawn_goblins(
                     scene: SceneRoot(handle.model.clone()),
                     transform: Transform::from_translation(spawn.position),
                     collider: Collider::cuboid(0.7, 1.225, 0.21),
+                    layer: CollisionLayers::new(
+                        GameLayer::GOBLIN,
+                        GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
+                    ),
                     ..Default::default()
                 },
-                super::ai::CreatureAiState::default(),
-                super::ai::CreatureThing {
-                    detection_range: 10.,
-                    max_aggro_range: 20.,
-                    target_distance: 2.,
-                    speed: 3.,
-                    hostile_towards: super::ai::CreatureFaction::PLAYER,
+                CreatureLookForTarget {
+                    search_radius: 10.,
+                    search_requires_los: true,
+                    max_follow_distance: 20.,
+                    entity_filter: GameLayer::PLAYER,
+                },
+                CreatureMoveTowardsTarget {
+                    target_gap: 2.,
+                    speed: 4.,
                 },
                 GoblinBehavior::Idle,
             ))
+            .observe(attack_on_target_reached)
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
+    }
+}
+
+fn attack_on_target_reached(
+    event: On<CreatureReachedTarget>,
+    handles: Res<GoblinHandles>,
+    query: Query<&GltfAnimationTarget>,
+    mut players: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
+) {
+    let target = query.get(event.event_target()).unwrap();
+    if let Ok((mut player, mut transitions)) = players.get_mut(**target) {
+        transitions
+            .play(
+                &mut player,
+                handles.attack_slash,
+                Duration::from_millis(100),
+            )
+            .repeat();
     }
 }
 

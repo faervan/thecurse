@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-mod ai;
+pub mod behavior;
 pub mod goblin;
 pub mod health;
 
@@ -8,7 +8,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
         app.add_plugins((
             health::plugin(game_state),
-            ai::plugin(game_state),
+            behavior::plugin(game_state),
             goblin::plugin(game_state),
         ));
 
@@ -45,7 +45,7 @@ impl Default for CreatureBundle {
             collider: Collider::cuboid(0.8, 1.8, 0.3),
             layer: CollisionLayers::new(
                 GameLayer::CREATURE,
-                GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
+                GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
             ),
             gravity_scale: GravityScale(10.),
             locked_axes: LockedAxes::ROTATION_LOCKED,
@@ -63,8 +63,8 @@ fn test(mut commands: Commands) {
         RigidBody::Dynamic,
         LockedAxes::ROTATION_LOCKED,
         CollisionLayers::new(
-            GameLayer::GOBLIN,
-            GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
+            GameLayer::CREATURE,
+            GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
         ),
     ));
 }

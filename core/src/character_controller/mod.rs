@@ -123,7 +123,7 @@ fn spawn_player(
                     collider: Collider::cuboid(0.5, 1.94, 0.2),
                     layer: CollisionLayers::new(
                         GameLayer::PLAYER,
-                        GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
+                        GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
                     ),
                     ..Default::default()
                 },
