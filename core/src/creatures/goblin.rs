@@ -183,11 +183,13 @@ fn reattack_or_move(
                 if transform.translation.distance(target_transform.translation)
                     > GOBLIN_ATTACK_RANGE_MAX
                 {
-                    commands.entity(entity).insert(CreatureMoveTowardsTarget {
-                        target_gap: GOBLIN_ATTACK_RANGE_MIN,
-                        speed: GOBLIN_SPEED,
-                    });
-                    *behavior = GoblinBehavior::Moving;
+                    if let Ok(mut entity_cmds) = commands.get_entity(entity) {
+                        entity_cmds.insert(CreatureMoveTowardsTarget {
+                            target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                            speed: GOBLIN_SPEED,
+                        });
+                        *behavior = GoblinBehavior::Moving;
+                    }
                 } else {
                     let rotation = Quat::from_rotation_arc(
                         Vec3::NEG_Z,
