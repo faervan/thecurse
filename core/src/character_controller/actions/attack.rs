@@ -1,7 +1,4 @@
-use crate::{
-    character_controller::{actions::aerial::AerialState, weapon::WeaponColliderHandle},
-    prelude::*,
-};
+use crate::{character_controller::actions::aerial::AerialState, prelude::*};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {

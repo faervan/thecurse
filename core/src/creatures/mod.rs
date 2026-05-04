@@ -3,12 +3,14 @@ use crate::prelude::*;
 pub mod behavior;
 pub mod goblin;
 pub mod health;
+pub mod weapon;
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
         app.add_plugins((
             health::plugin(game_state),
             behavior::plugin(game_state),
+            weapon::plugin,
             goblin::plugin(game_state),
         ));
 

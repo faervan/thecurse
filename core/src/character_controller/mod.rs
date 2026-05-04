@@ -1,12 +1,10 @@
 use crate::{character_controller::actions::CharacterActions, prelude::*};
 
 pub mod actions;
-/// TODO! Should not be in character_controller
-pub mod weapon;
 
 pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins((actions::plugin(game_state), weapon::plugin));
+        app.add_plugins(actions::plugin(game_state));
 
         app.load_assets_with(|handle: GltfLoadingHandle<PlayerCharacterHandle>, world| {
             let gltf = handle.get_gltf(world);
@@ -130,6 +128,6 @@ fn spawn_player(
                 CharacterActions::default(),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
-            .observe(on_ready_insert_child_pointer::<weapon::WeaponSocketHandle>);
+            .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
     }
 }

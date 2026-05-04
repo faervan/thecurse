@@ -1,4 +1,4 @@
-use crate::{prelude::*, weapon::WeaponSocketHandle};
+use crate::prelude::*;
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -129,7 +129,7 @@ fn spawn_goblins(
                     entity_filter: GameLayer::PLAYER,
                 },
                 CreatureMoveTowardsTarget {
-                    target_gap: 2.,
+                    target_gap: 1.5,
                     speed: 4.,
                 },
                 GoblinBehavior::Idle,
@@ -142,12 +142,18 @@ fn spawn_goblins(
 
 fn attack_on_target_reached(
     event: On<CreatureReachedTarget>,
+    mut commands: Commands,
     handles: Res<GoblinHandles>,
-    query: Query<&GltfAnimationTarget>,
+    query: Query<(&GltfAnimationTarget, &WeaponColliderHandle)>,
     mut players: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
 ) {
-    let target = query.get(event.event_target()).unwrap();
+    let Ok((target, collider_handle)) = query.get(event.event_target()) else {
+        return;
+    };
     if let Ok((mut player, mut transitions)) = players.get_mut(**target) {
+        commands
+            .entity(**collider_handle)
+            .insert(Collider::cuboid(0.5, 5., 0.3));
         transitions
             .play(
                 &mut player,

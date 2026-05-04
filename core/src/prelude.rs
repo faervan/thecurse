@@ -20,6 +20,7 @@ pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 pub use crate::creatures::behavior::*;
 pub use crate::creatures::goblin::SpawnGoblin;
 pub use crate::creatures::health::{DealDamage, Health};
+pub use crate::creatures::weapon::{WeaponColliderHandle, WeaponSocketHandle};
 pub use crate::creatures::{Creature, CreatureBundle};
 
 pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
