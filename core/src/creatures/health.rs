@@ -3,7 +3,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
 };
 
-use crate::prelude::*;
+use crate::{prelude::*, utils::follow::Follow};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -16,7 +16,10 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             apply_damage.run_if(in_state(game_state).and(on_message::<DealDamage>)),
         );
 
-        app.add_systems(Update, update_health_bars.run_if(in_state(game_state)));
+        app.add_systems(
+            Update,
+            (update_health_bars, despawn_health_bars).run_if(in_state(game_state)),
+        );
     }
 }
 
@@ -60,23 +63,30 @@ fn apply_damage(
 #[component(on_add)]
 pub struct ShowHealthBar(Option<Handle<HealthBarMaterial>>);
 
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+struct HealthBar;
+
 impl ShowHealthBar {
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
         let mut meshes = world.resource_mut::<Assets<Mesh>>();
-        let mesh = meshes.add(Plane3d::new(Vec3::NEG_Z, Vec2::new(0.5, 0.05)));
+        let mesh = meshes.add(Plane3d::new(Vec3::Z, Vec2::new(0.5, 0.05)));
         let mut materials = world.resource_mut::<Assets<HealthBarMaterial>>();
         let material = materials.add(HealthBarMaterial { health_percent: 1. });
 
         world.get_mut::<Self>(hook.entity).unwrap().0 = Some(material.clone());
         world.commands().spawn((
             Name::new("Health Bar"),
+            HealthBar,
             Mesh3d(mesh),
             MeshMaterial3d(material),
             NotShadowCaster,
             NotShadowReceiver,
             Billboarded,
-            Transform::from_xyz(0., 1.1, 0.),
-            ChildOf(hook.entity),
+            Follow {
+                target: hook.entity,
+                offset: Vec3::new(0., 1.1, 0.),
+            },
         ));
     }
 }
@@ -94,9 +104,14 @@ fn update_health_bars(
     }
 }
 
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-struct HealthBar(Handle<HealthBarMaterial>);
+fn despawn_health_bars(
+    mut commands: Commands,
+    query: Query<Entity, (With<HealthBar>, Without<Follow>)>,
+) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 struct HealthBarMaterial {

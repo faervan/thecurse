@@ -135,9 +135,10 @@ fn remove_targets(
                 > config.max_follow_distance
         }) {
             commands.entity(entity).remove::<CreatureTarget>();
-            commands
-                .entity(search.sensor)
-                .insert((Collider::sphere(config.search_radius), Sensor));
+            if let Ok(mut entity_cmds) = commands.get_entity(search.sensor) {
+                entity_cmds.insert((Collider::sphere(config.search_radius), Sensor));
+            }
+
             debug!("Creature {entity} lost its target!");
         }
     }
