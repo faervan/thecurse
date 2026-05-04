@@ -13,8 +13,6 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             weapon::plugin,
             goblin::plugin(game_state),
         ));
-
-        app.add_systems(OnEnter(game_state), test);
     }
 }
 
@@ -54,19 +52,4 @@ impl Default for CreatureBundle {
             creature: Creature,
         }
     }
-}
-
-fn test(mut commands: Commands) {
-    commands.spawn((
-        Name::new("Test dummy"),
-        Health(20.),
-        Transform::from_xyz(3., 1., 1.),
-        Collider::cuboid(0.8, 2., 0.5),
-        RigidBody::Dynamic,
-        LockedAxes::ROTATION_LOCKED,
-        CollisionLayers::new(
-            GameLayer::CREATURE,
-            GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,
-        ),
-    ));
 }

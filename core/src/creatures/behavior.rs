@@ -109,7 +109,10 @@ fn find_targets(
         {
             commands.entity(entity).insert(CreatureTarget(closest));
             debug!("Creature found target {closest}");
-            commands.entity(search.sensor).remove::<Collider>();
+            commands
+                .entity(search.sensor)
+                .remove::<Collider>()
+                .remove::<Sensor>();
         }
     }
 }
@@ -133,7 +136,7 @@ fn remove_targets(
             commands.entity(entity).remove::<CreatureTarget>();
             commands
                 .entity(search.sensor)
-                .insert(Collider::sphere(config.search_radius));
+                .insert((Collider::sphere(config.search_radius), Sensor));
             debug!("Creature {entity} lost its target!");
         }
     }

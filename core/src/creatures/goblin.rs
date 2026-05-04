@@ -132,7 +132,7 @@ fn spawn_goblins(
                     search_radius: 10.,
                     search_requires_los: true,
                     max_follow_distance: 20.,
-                    entity_filter: GameLayer::PLAYER,
+                    entity_filter: GameLayer::PLAYER | GameLayer::GOBLIN,
                 },
                 CreatureMoveTowardsTarget {
                     target_gap: GOBLIN_ATTACK_RANGE_MIN,

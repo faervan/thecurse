@@ -146,7 +146,7 @@ impl AnimationExt for EntityCommands<'_> {
         C: Component<Mutability = Mutable>,
         for<'a> F: IntoTransformationAnimation<&'a mut C>,
     {
-        self.queue(move |mut entity_world_mut: EntityWorldMut<'_>| {
+        self.queue_silenced(move |mut entity_world_mut: EntityWorldMut<'_>| {
             if let Some(origin) = entity_world_mut.get() {
                 entity_world_mut.insert(Animation::<&mut C>::new(f, duration_ms, origin));
             }
