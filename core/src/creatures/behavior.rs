@@ -23,6 +23,7 @@ pub struct CreatureTarget(Entity);
 #[component(on_add)]
 pub struct CreatureLookForTarget {
     pub search_radius: f32,
+    /// TODO!
     pub search_requires_los: bool,
     /// If the target is further away than this, the creature will loose it. Thus this value has to
     /// be smaller than `search_radius`.
@@ -162,21 +163,20 @@ fn creature_move_towards_target(
     mut commands: Commands,
     query: Query<(
         Entity,
+        &Transform,
         &CreatureTarget,
         &CreatureMoveTowardsTarget,
         &mut LinearVelocity,
     )>,
-    mut targets: Query<&mut Transform>,
+    targets: Query<&Transform>,
 ) {
-    for (entity, target, move_to_target, mut velocity) in query {
-        let Ok(target_pos) = targets.get(**target).map(|transform| transform.translation) else {
+    for (entity, transform, target, move_to_target, mut velocity) in query {
+        let Ok(target_transform) = targets.get(**target) else {
             continue;
         };
-        let Ok(mut transform) = targets.get_mut(entity) else {
-            continue;
-        };
-        let direction = (target_pos - transform.translation).with_y(0.);
-        transform.look_to(-direction, Vec3::Y);
+        let direction = (target_transform.translation - transform.translation).with_y(0.);
+        let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.normalize_or(Vec3::NEG_Z));
+        commands.entity(entity).transition(rotation, 100);
         if direction.length() <= move_to_target.target_gap {
             if velocity.0 != Vec3::ZERO {
                 velocity.0 = Vec3::ZERO;
