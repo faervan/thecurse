@@ -23,6 +23,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
         app.add_plugins((
             assets::plugin,
             utils::follow::FollowUtilPlugin::new(game_state),
+            utils::billboard::plugin(game_state),
             animation::AnimationPlugin,
             creatures::plugin(game_state),
             character_controller::plugin(game_state),

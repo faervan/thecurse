@@ -125,6 +125,7 @@ fn spawn_player(
                     ),
                     ..Default::default()
                 },
+                ShowHealthBar::default(),
                 CharacterActions::default(),
             ))
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)

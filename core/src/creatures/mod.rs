@@ -38,7 +38,7 @@ impl Default for CreatureBundle {
     fn default() -> Self {
         Self {
             name: Name::default(),
-            health: Health(20.),
+            health: Health::new(20.),
             scene: SceneRoot::default(),
             transform: Transform::default(),
             rigid_body: RigidBody::Dynamic,

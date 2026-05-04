@@ -13,13 +13,14 @@ pub use bevy::prelude::*;
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::GameLayer;
+pub use crate::utils::billboard::Billboarded;
 pub use crate::utils::gltf_instance_hooks::{GltfAnimationTarget, on_ready_insert_child_pointer};
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
 pub use crate::creatures::behavior::*;
 pub use crate::creatures::goblin::SpawnGoblin;
-pub use crate::creatures::health::{DealDamage, Health};
+pub use crate::creatures::health::*;
 pub use crate::creatures::weapon::{WeaponColliderHandle, WeaponSocketHandle};
 pub use crate::creatures::{Creature, CreatureBundle};
 

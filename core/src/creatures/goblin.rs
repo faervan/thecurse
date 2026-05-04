@@ -118,7 +118,7 @@ fn spawn_goblins(
                 Goblin,
                 CreatureBundle {
                     name: Name::new("Goblin"),
-                    health: Health(30.),
+                    health: Health::new(30.),
                     scene: SceneRoot(handle.model.clone()),
                     transform: Transform::from_translation(spawn.position),
                     collider: Collider::cuboid(0.7, 1.225, 0.21),
@@ -128,6 +128,7 @@ fn spawn_goblins(
                     ),
                     ..Default::default()
                 },
+                ShowHealthBar::default(),
                 CreatureLookForTarget {
                     search_radius: 10.,
                     search_requires_los: true,
