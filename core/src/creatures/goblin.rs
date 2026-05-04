@@ -135,12 +135,28 @@ fn spawn_goblins(
                     max_follow_distance: 20.,
                     entity_filter: GameLayer::PLAYER | GameLayer::GOBLIN,
                 },
-                CreatureMoveTowardsTarget {
-                    target_gap: GOBLIN_ATTACK_RANGE_MIN,
-                    speed: GOBLIN_SPEED,
-                },
                 GoblinBehavior::Idle,
             ))
+            .observe(|event: On<CreatureTargetFound>, mut commands: Commands| {
+                commands
+                    .entity(event.event_target())
+                    .insert(CreatureMoveTowardsTarget {
+                        target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                        speed: GOBLIN_SPEED,
+                    });
+            })
+            .observe(
+                |event: On<CreatureTargetLost>,
+                 mut commands: Commands,
+                 mut query: Query<&mut GoblinBehavior>| {
+                    commands
+                        .entity(event.event_target())
+                        .remove::<CreatureMoveTowardsTarget>();
+                    if let Ok(mut behavior) = query.get_mut(event.event_target()) {
+                        *behavior = GoblinBehavior::Idle;
+                    }
+                },
+            )
             .observe(attack_on_target_reached)
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
@@ -156,9 +172,9 @@ fn attack_on_target_reached(
         return;
     };
     *behavior = GoblinBehavior::Attacking;
-    commands
-        .entity(**collider_handle)
-        .insert(Collider::cuboid(0.5, 5., 0.3));
+    if let Ok(mut cmds) = commands.get_entity(**collider_handle) {
+        cmds.insert((Collider::cuboid(0.5, 5., 0.3), Sensor));
+    }
 }
 
 fn reattack_or_move(
@@ -166,6 +182,7 @@ fn reattack_or_move(
     query: Query<(
         Entity,
         &mut GoblinBehavior,
+        &WeaponColliderHandle,
         &GltfAnimationTarget,
         &Transform,
         Option<&CreatureTarget>,
@@ -173,7 +190,8 @@ fn reattack_or_move(
     players: Query<&AnimationPlayer>,
     targets: Query<&Transform>,
 ) {
-    for (entity, mut behavior, animation_target, transform, target_maybe) in query {
+    for (entity, mut behavior, collider_handle, animation_target, transform, target_maybe) in query
+    {
         if *behavior == GoblinBehavior::Attacking
             && let Ok(player) = players.get(**animation_target)
             && player.all_finished()
@@ -190,6 +208,9 @@ fn reattack_or_move(
                             speed: GOBLIN_SPEED,
                         });
                         *behavior = GoblinBehavior::Moving;
+                        if let Ok(mut entity_cmds) = commands.get_entity(**collider_handle) {
+                            entity_cmds.remove::<(Collider, Sensor)>();
+                        }
                     }
                 } else {
                     let rotation = Quat::from_rotation_arc(
@@ -203,6 +224,9 @@ fn reattack_or_move(
                 }
             } else {
                 *behavior = GoblinBehavior::Idle;
+                if let Ok(mut entity_cmds) = commands.get_entity(**collider_handle) {
+                    entity_cmds.remove::<(Collider, Sensor)>();
+                }
             }
         }
     }

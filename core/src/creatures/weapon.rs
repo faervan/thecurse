@@ -61,7 +61,6 @@ impl WeaponSocketHandle {
                     p.spawn((
                         Transform::from_xyz(0., 4., 0.),
                         RigidBody::Kinematic,
-                        Sensor,
                         CollisionEventsEnabled,
                         CollisionLayers::new(GameLayer::WEAPON_MELEE, GameLayer::CREATURE),
                     ))

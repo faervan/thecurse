@@ -18,9 +18,17 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 #[reflect(Component)]
 pub struct CreatureTarget(Entity);
 
+#[derive(EntityEvent)]
+pub struct CreatureTargetFound(Entity);
+
+#[derive(EntityEvent)]
+pub struct CreatureTargetLost(Entity);
+
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[component(on_add)]
+/// Will trigger a [`CreatureTargetFound`] event when a target was found and a
+/// [`CreatureTargetLost`] when the target was lost.
 pub struct CreatureLookForTarget {
     pub search_radius: f32,
     /// TODO!
@@ -108,7 +116,10 @@ fn find_targets(
                 }
             })
         {
-            commands.entity(entity).insert(CreatureTarget(closest));
+            commands
+                .entity(entity)
+                .insert(CreatureTarget(closest))
+                .trigger(CreatureTargetFound);
             debug!("Creature found target {closest}");
             commands
                 .entity(search.sensor)
@@ -134,7 +145,10 @@ fn remove_targets(
             transform.translation.distance(target_transform.translation)
                 > config.max_follow_distance
         }) {
-            commands.entity(entity).remove::<CreatureTarget>();
+            commands
+                .entity(entity)
+                .remove::<CreatureTarget>()
+                .trigger(CreatureTargetLost);
             if let Ok(mut entity_cmds) = commands.get_entity(search.sensor) {
                 entity_cmds.insert((Collider::sphere(config.search_radius), Sensor));
             }
