@@ -69,7 +69,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
         app.add_systems(
             Update,
-            update_goblin_animtation.run_if(in_state(game_state)),
+            (reattack_or_move, update_goblin_animtation).run_if(in_state(game_state)),
         );
     }
 }
@@ -81,11 +81,13 @@ struct GoblinHandles {
     attack_slash: AnimationNodeIndex,
 }
 
-#[derive(Component, Debug, Default, Reflect)]
+#[derive(Component, Debug, Default, Reflect, PartialEq)]
 #[reflect(Component, Default)]
 enum GoblinBehavior {
     #[default]
     Idle,
+    Moving,
+    Attacking,
 }
 
 #[derive(Component, Reflect)]
@@ -100,6 +102,10 @@ impl GltfAssetPath for GoblinHandles {
 pub struct SpawnGoblin {
     pub position: Vec3,
 }
+
+const GOBLIN_SPEED: f32 = 4.;
+const GOBLIN_ATTACK_RANGE_MIN: f32 = 1.5;
+const GOBLIN_ATTACK_RANGE_MAX: f32 = 1.8;
 
 fn spawn_goblins(
     handle: Res<GoblinHandles>,
@@ -129,8 +135,8 @@ fn spawn_goblins(
                     entity_filter: GameLayer::PLAYER,
                 },
                 CreatureMoveTowardsTarget {
-                    target_gap: 1.5,
-                    speed: 4.,
+                    target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                    speed: GOBLIN_SPEED,
                 },
                 GoblinBehavior::Idle,
             ))
@@ -143,24 +149,59 @@ fn spawn_goblins(
 fn attack_on_target_reached(
     event: On<CreatureReachedTarget>,
     mut commands: Commands,
-    handles: Res<GoblinHandles>,
-    query: Query<(&GltfAnimationTarget, &WeaponColliderHandle)>,
-    mut players: Query<(&mut AnimationPlayer, &mut AnimationTransitions)>,
+    mut query: Query<(&mut GoblinBehavior, &WeaponColliderHandle)>,
 ) {
-    let Ok((target, collider_handle)) = query.get(event.event_target()) else {
+    let Ok((mut behavior, collider_handle)) = query.get_mut(event.event_target()) else {
         return;
     };
-    if let Ok((mut player, mut transitions)) = players.get_mut(**target) {
-        commands
-            .entity(**collider_handle)
-            .insert(Collider::cuboid(0.5, 5., 0.3));
-        transitions
-            .play(
-                &mut player,
-                handles.attack_slash,
-                Duration::from_millis(100),
-            )
-            .repeat();
+    *behavior = GoblinBehavior::Attacking;
+    commands
+        .entity(**collider_handle)
+        .insert(Collider::cuboid(0.5, 5., 0.3));
+}
+
+fn reattack_or_move(
+    mut commands: Commands,
+    query: Query<(
+        Entity,
+        &mut GoblinBehavior,
+        &GltfAnimationTarget,
+        &Transform,
+        Option<&CreatureTarget>,
+    )>,
+    players: Query<&AnimationPlayer>,
+    targets: Query<&Transform>,
+) {
+    for (entity, mut behavior, animation_target, transform, target_maybe) in query {
+        if *behavior == GoblinBehavior::Attacking
+            && let Ok(player) = players.get(**animation_target)
+            && player.all_finished()
+        {
+            if let Some(target) = target_maybe
+                && let Ok(target_transform) = targets.get(**target)
+            {
+                if transform.translation.distance(target_transform.translation)
+                    > GOBLIN_ATTACK_RANGE_MAX
+                {
+                    commands.entity(entity).insert(CreatureMoveTowardsTarget {
+                        target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                        speed: GOBLIN_SPEED,
+                    });
+                    *behavior = GoblinBehavior::Moving;
+                } else {
+                    let rotation = Quat::from_rotation_arc(
+                        Vec3::NEG_Z,
+                        (transform.translation - target_transform.translation)
+                            .with_y(0.)
+                            .normalize(),
+                    );
+                    commands.entity(entity).transition(rotation, 100);
+                    *behavior = GoblinBehavior::Attacking;
+                }
+            } else {
+                *behavior = GoblinBehavior::Idle;
+            }
+        }
     }
 }
 
@@ -174,13 +215,16 @@ fn update_goblin_animtation(
 ) {
     for (behavior, target) in query {
         if let Ok((mut player, mut transitions)) = players.get_mut(**target) {
-            match behavior {
-                GoblinBehavior::Idle => {
-                    transitions
-                        .play(&mut player, handles.idle, Duration::from_millis(100))
-                        .set_speed(0.1)
-                        .repeat();
-                }
+            let (animation, speed, repeat) = match behavior {
+                GoblinBehavior::Idle => (handles.idle, 0.1, true),
+                GoblinBehavior::Moving => (handles.idle, 1., true),
+                GoblinBehavior::Attacking => (handles.attack_slash, 1., false),
+            };
+            let active = transitions
+                .play(&mut player, animation, Duration::from_millis(100))
+                .set_speed(speed);
+            if repeat {
+                active.repeat();
             }
         }
     }
