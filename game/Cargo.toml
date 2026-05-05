@@ -13,5 +13,7 @@ thecurse_core.workspace = true
 
 bevy.workspace = true
 
+rand.workspace = true
+
 [lints]
 workspace = true

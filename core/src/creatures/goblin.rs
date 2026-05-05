@@ -130,9 +130,9 @@ fn spawn_goblins(
                 },
                 ShowHealthBar::default(),
                 CreatureLookForTarget {
-                    search_radius: 10.,
+                    search_radius: 20.,
                     search_requires_los: true,
-                    max_follow_distance: 20.,
+                    max_follow_distance: 25.,
                     entity_filter: GameLayer::PLAYER | GameLayer::GOBLIN,
                 },
                 GoblinBehavior::Idle,

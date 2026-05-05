@@ -60,16 +60,13 @@ fn set_state_game(mut next_state: ResMut<NextState<AppState>>) {
 }
 
 fn demo(mut goblin_spawner: MessageWriter<SpawnGoblin>) {
-    goblin_spawner.write(SpawnGoblin {
-        position: Vec3::new(0., 1., 5.),
-    });
-    goblin_spawner.write(SpawnGoblin {
-        position: Vec3::new(5., 1., 5.),
-    });
-    goblin_spawner.write(SpawnGoblin {
-        position: Vec3::new(10., 1., 8.),
-    });
-    goblin_spawner.write(SpawnGoblin {
-        position: Vec3::new(5., 1., 25.),
-    });
+    let mut rng = rand::rng();
+    use rand::RngExt as _;
+    for _ in 0..80 {
+        let x = rng.random_range(-50_f32..50_f32);
+        let z = rng.random_range(-50_f32..50_f32);
+        goblin_spawner.write(SpawnGoblin {
+            position: Vec3::new(x, 1., z),
+        });
+    }
 }
