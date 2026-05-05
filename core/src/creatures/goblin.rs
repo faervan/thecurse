@@ -11,6 +11,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
             let (graph, clips) = match gltf.get_animations(|get| {
                 get("Idle")?;
+                get("WalkForwards")?;
                 get("AttackSlash")?;
 
                 Ok(())
@@ -56,6 +57,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             GoblinHandles {
                 model: scene,
                 idle: clips["Idle"],
+                forwards: clips["WalkForwards"],
                 attack_slash: clips["AttackSlash"],
             }
         });
@@ -78,6 +80,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 struct GoblinHandles {
     model: Handle<Scene>,
     idle: AnimationNodeIndex,
+    forwards: AnimationNodeIndex,
     attack_slash: AnimationNodeIndex,
 }
 
@@ -137,23 +140,34 @@ fn spawn_goblins(
                 },
                 GoblinBehavior::Idle,
             ))
-            .observe(|event: On<CreatureTargetFound>, mut commands: Commands| {
-                commands
-                    .entity(event.event_target())
-                    .insert(CreatureMoveTowardsTarget {
-                        target_gap: GOBLIN_ATTACK_RANGE_MIN,
-                        speed: GOBLIN_SPEED,
-                    });
-            })
             .observe(
-                |event: On<CreatureTargetLost>,
+                |event: On<CreatureTargetFound>,
                  mut commands: Commands,
                  mut query: Query<&mut GoblinBehavior>| {
                     commands
                         .entity(event.event_target())
-                        .remove::<CreatureMoveTowardsTarget>();
+                        .insert(CreatureMoveTowardsTarget {
+                            target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                            speed: GOBLIN_SPEED,
+                        });
                     if let Ok(mut behavior) = query.get_mut(event.event_target()) {
+                        *behavior = GoblinBehavior::Moving;
+                    }
+                },
+            )
+            .observe(
+                |event: On<CreatureTargetLost>,
+                 mut commands: Commands,
+                 mut query: Query<(&mut GoblinBehavior, &WeaponColliderHandle)>| {
+                    commands
+                        .entity(event.event_target())
+                        .remove::<CreatureMoveTowardsTarget>();
+                    if let Ok((mut behavior, collider_handle)) = query.get_mut(event.event_target())
+                    {
                         *behavior = GoblinBehavior::Idle;
+                        if let Ok(mut entity_cmds) = commands.get_entity(**collider_handle) {
+                            entity_cmds.remove::<(Collider, Sensor)>();
+                        }
                     }
                 },
             )
@@ -244,7 +258,7 @@ fn update_goblin_animtation(
         if let Ok((mut player, mut transitions)) = players.get_mut(**target) {
             let (animation, speed, repeat) = match behavior {
                 GoblinBehavior::Idle => (handles.idle, 0.1, true),
-                GoblinBehavior::Moving => (handles.idle, 1., true),
+                GoblinBehavior::Moving => (handles.forwards, 1., true),
                 GoblinBehavior::Attacking => (handles.attack_slash, 1., false),
             };
             let active = transitions
