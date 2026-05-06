@@ -69,13 +69,15 @@ fn attack_changes(
     for (attack, target, weapon_entity) in changed {
         let animation = match attack {
             AttackState::None => {
-                commands.entity(**weapon_entity).remove::<Collider>();
+                commands
+                    .entity(**weapon_entity)
+                    .remove::<(Collider, Sensor)>();
                 character.idle
             }
             AttackState::Attacking { timer, ty } if timer.elapsed().is_zero() => {
                 commands
                     .entity(**weapon_entity)
-                    .insert(Collider::cuboid(0.5, 5., 0.3));
+                    .insert((Collider::cuboid(0.5, 5., 0.3), Sensor));
                 match ty {
                     AttackType::Normal => character.attack,
                     AttackType::SwingBottom => character.attack_bottom,

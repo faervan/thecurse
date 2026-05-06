@@ -63,4 +63,18 @@ fn spawn(
             ..Default::default()
         },
     ));
+
+    commands.spawn((
+        Name::new("Rock"),
+        Obstacle,
+        Transform::from_xyz(10., 2.5, 10.),
+        Mesh3d(meshes.add(Cuboid::new(5., 5., 5.))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgb(0.5, 0.5, 0.1),
+            ..Default::default()
+        })),
+        RigidBody::Static,
+        Collider::cuboid(5., 5., 5.),
+        CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
+    ));
 }

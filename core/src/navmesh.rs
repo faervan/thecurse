@@ -27,6 +27,9 @@ fn setup(mut commands: Commands) {
             build_timeout: Some(1.0),
             simplify: 0.005,
             merge_steps: 0,
+            agent_radius: 0.7,
+            default_search_delta: 0.1,
+            default_search_steps: 8,
             ..default()
         },
         NavMeshUpdateMode::Direct,

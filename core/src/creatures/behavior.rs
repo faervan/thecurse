@@ -9,7 +9,12 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
         app.add_systems(
             Update,
-            creature_move_towards_target.run_if(in_state(game_state)),
+            (
+                insert_creature_navmesh_paths,
+                update_creature_paths,
+                creature_move_towards_target,
+            )
+                .run_if(in_state(game_state)),
         );
     }
 }
@@ -161,6 +166,7 @@ fn remove_targets(
 #[reflect(Component)]
 /// Make the creature walk towards its [`CreatureTarget`]. Once it reached the target, this
 /// component will be removed and a [`CreatureReachedTarget`] event will be fired.
+/// If the target can't be reached, a [`CreatureTargetUnreachable`] event will be fired instead.
 /// This will also rotate the creature towards the target.
 pub struct CreatureMoveTowardsTarget {
     /// Gap between the creature and its target that is still interpreted as "creature reached
@@ -170,37 +176,155 @@ pub struct CreatureMoveTowardsTarget {
     pub speed: f32,
 }
 
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+struct CreatureNavmeshPath {
+    path: Vec<Vec2>,
+    start: Vec2,
+    update_timer: Timer,
+}
+
 #[derive(EntityEvent, Debug)]
 pub struct CreatureReachedTarget(Entity);
 
-fn creature_move_towards_target(
+#[derive(EntityEvent, Debug)]
+pub struct CreatureTargetUnreachable(Entity);
+
+fn insert_creature_navmesh_paths(
+    navmeshes: Res<Assets<NavMesh>>,
+    mut commands: Commands,
+    query: Query<
+        (Entity, &Transform, &CreatureTarget),
+        (
+            With<CreatureMoveTowardsTarget>,
+            Without<CreatureNavmeshPath>,
+        ),
+    >,
+    targets: Query<&Transform>,
+) {
+    let Some(navmesh) = navmeshes.get(ManagedNavMesh::from_id(0)) else {
+        warn!("No NavMesh available");
+        return;
+    };
+    for (entity, transform, target) in query {
+        let start = vec2(transform.translation.x, transform.translation.z);
+        let Some(path) = get_creature_path(navmesh, start, &targets, **target) else {
+            trigger_target_unreachable(&mut commands, entity);
+            continue;
+        };
+        commands.entity(entity).try_insert(CreatureNavmeshPath {
+            path,
+            start,
+            update_timer: Timer::new(Duration::from_millis(500), TimerMode::Repeating),
+        });
+    }
+}
+
+fn update_creature_paths(
+    time: Res<Time>,
+    navmeshes: Res<Assets<NavMesh>>,
     mut commands: Commands,
     query: Query<(
         Entity,
         &Transform,
         &CreatureTarget,
-        &CreatureMoveTowardsTarget,
-        &mut LinearVelocity,
+        &mut CreatureNavmeshPath,
     )>,
     targets: Query<&Transform>,
 ) {
-    for (entity, transform, target, move_to_target, mut velocity) in query {
-        let Ok(target_transform) = targets.get(**target) else {
-            continue;
-        };
-        let direction = (target_transform.translation - transform.translation).with_y(0.);
+    let delta = time.delta();
+    let Some(navmesh) = navmeshes.get(ManagedNavMesh::from_id(0)) else {
+        warn!("No NavMesh available");
+        return;
+    };
+    for (entity, transform, target, mut navmesh_path) in query {
+        navmesh_path.update_timer.tick(delta);
+        if navmesh_path.update_timer.just_finished() {
+            let start = vec2(transform.translation.x, transform.translation.z);
+            let Some(path) = get_creature_path(navmesh, start, &targets, **target) else {
+                trigger_target_unreachable(&mut commands, entity);
+                continue;
+            };
+            navmesh_path.path = path;
+        }
+    }
+}
+
+fn get_creature_path(
+    navmesh: &NavMesh,
+    start: Vec2,
+    targets: &Query<&Transform>,
+    target: Entity,
+) -> Option<Vec<Vec2>> {
+    let target_transform = targets.get(target).ok()?;
+    let mut end = vec2(
+        target_transform.translation.x,
+        target_transform.translation.z,
+    );
+    if !navmesh.is_in_mesh(end) {
+        let closest = navmesh.get().get_closest_point(end)?;
+        end = closest.position();
+    }
+    let path = navmesh.path(start, end)?;
+    Some(path.path.into_iter().rev().collect())
+}
+
+fn trigger_target_unreachable(commands: &mut Commands, target: Entity) {
+    commands
+        .entity(target)
+        .remove::<CreatureMoveTowardsTarget>()
+        .trigger(CreatureTargetUnreachable);
+}
+
+fn creature_move_towards_target(
+    mut gizmos: Gizmos,
+    mut commands: Commands,
+    query: Query<(
+        Entity,
+        &Transform,
+        &mut CreatureNavmeshPath,
+        &CreatureMoveTowardsTarget,
+        &mut LinearVelocity,
+    )>,
+) {
+    for (entity, transform, mut path, move_to_target, mut velocity) in query {
+        let next_step = path.path.last().unwrap();
+
+        let next = vec3(next_step.x, 0., next_step.y);
+        let direction = (next - transform.translation).with_y(0.);
         let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.normalize_or(Vec3::NEG_Z));
         commands.entity(entity).transition(rotation, 100);
-        if direction.length() <= move_to_target.target_gap {
-            if velocity.0 != Vec3::ZERO {
-                velocity.0 = Vec3::ZERO;
-            }
-            commands
-                .entity(entity)
-                .remove::<CreatureMoveTowardsTarget>();
-            commands.entity(entity).trigger(CreatureReachedTarget);
+
+        gizmos.line(
+            transform.translation,
+            next,
+            bevy::color::palettes::css::ORANGE,
+        );
+
+        if path.path.len() == 1 && direction.length() <= move_to_target.target_gap {
+            trigger_target_reached(&mut commands, entity, velocity);
             continue;
+        } else if direction.length() > (next_step - path.start).length() {
+            path.path.pop();
+            if path.path.is_empty() {
+                trigger_target_reached(&mut commands, entity, velocity);
+                continue;
+            }
         }
         velocity.0 = direction.normalize_or_zero() * move_to_target.speed;
+    }
+}
+
+fn trigger_target_reached(
+    commands: &mut Commands,
+    target: Entity,
+    mut velocity: Mut<LinearVelocity>,
+) {
+    if velocity.0 != Vec3::ZERO {
+        velocity.0 = Vec3::ZERO;
+    }
+    if let Ok(mut cmds) = commands.get_entity(target) {
+        cmds.remove::<(CreatureMoveTowardsTarget, CreatureNavmeshPath)>()
+            .trigger(CreatureReachedTarget);
     }
 }

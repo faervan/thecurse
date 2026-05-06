@@ -71,7 +71,12 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
         app.add_systems(
             Update,
-            (reattack_or_move, update_goblin_animtation).run_if(in_state(game_state)),
+            (
+                retry_move_to_target,
+                reattack_or_move,
+                update_goblin_animtation,
+            )
+                .run_if(in_state(game_state)),
         );
     }
 }
@@ -119,7 +124,6 @@ fn spawn_goblins(
         commands
             .spawn((
                 Goblin,
-                Obstacle,
                 CreatureBundle {
                     name: Name::new("Goblin"),
                     health: Health::new(30.),
@@ -172,9 +176,47 @@ fn spawn_goblins(
                     }
                 },
             )
+            .observe(
+                |event: On<CreatureTargetUnreachable>,
+                 mut commands: Commands,
+                 mut query: Query<&mut GoblinBehavior>| {
+                    let entity = event.event_target();
+                    if let Ok(mut behavior) = query.get_mut(entity) {
+                        *behavior = GoblinBehavior::Idle;
+                    }
+                    commands.entity(entity).insert(RetryMoveToTarget(Timer::new(
+                        Duration::from_millis(1000),
+                        TimerMode::Once,
+                    )));
+                },
+            )
             .observe(attack_on_target_reached)
             .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
             .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
+    }
+}
+
+#[derive(Component, Reflect, Deref, DerefMut)]
+#[reflect(Component)]
+struct RetryMoveToTarget(Timer);
+
+fn retry_move_to_target(
+    time: Res<Time>,
+    mut commands: Commands,
+    query: Query<(Entity, &mut RetryMoveToTarget)>,
+) {
+    for (entity, mut timer) in query {
+        timer.tick(time.delta());
+        if timer.just_finished() {
+            debug!("Retrying move to target");
+            commands
+                .entity(entity)
+                .remove::<RetryMoveToTarget>()
+                .try_insert(CreatureMoveTowardsTarget {
+                    target_gap: GOBLIN_ATTACK_RANGE_MIN,
+                    speed: GOBLIN_SPEED,
+                });
+        }
     }
 }
 
