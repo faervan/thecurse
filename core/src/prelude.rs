@@ -5,10 +5,12 @@ pub use std::time::Duration;
 
 pub use thiserror::Error;
 
-pub use avian3d::prelude::*;
+pub use avian3d::{math::*, prelude::*};
 pub use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+pub use bevy::input::common_conditions::{input_just_pressed, input_just_released, input_pressed};
 pub use bevy::platform::collections::{HashMap, HashSet};
 pub use bevy::prelude::*;
+pub use vleue_navigator::prelude::*;
 
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
@@ -17,6 +19,8 @@ pub use crate::utils::billboard::Billboarded;
 pub use crate::utils::gltf_instance_hooks::{GltfAnimationTarget, on_ready_insert_child_pointer};
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
+
+pub use crate::navmesh::Obstacle;
 
 pub use crate::creatures::behavior::*;
 pub use crate::creatures::goblin::SpawnGoblin;

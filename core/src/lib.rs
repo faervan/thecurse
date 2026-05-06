@@ -5,6 +5,7 @@ pub mod animation;
 pub mod assets;
 pub mod creatures;
 pub mod debug;
+mod navmesh;
 pub mod utils;
 
 mod shared;
@@ -19,12 +20,17 @@ pub use camera_controller::*;
 pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
         app.add_plugins(bevy_skein::SkeinPlugin::default());
+        app.add_plugins((
+            VleueNavigatorPlugin,
+            NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
+        ));
 
         app.add_plugins((
             assets::plugin,
             utils::follow::FollowUtilPlugin::new(game_state),
             utils::billboard::plugin(game_state),
             animation::AnimationPlugin,
+            navmesh::plugin(game_state),
             creatures::plugin(game_state),
             character_controller::plugin(game_state),
         ));

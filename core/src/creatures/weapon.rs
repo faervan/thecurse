@@ -66,7 +66,6 @@ impl WeaponSocketHandle {
                     ))
                     .observe(
                         |event: On<CollisionStart>, mut damage: MessageWriter<DealDamage>| {
-                            debug!("Sword {} hit {}", event.collider1, event.collider2);
                             damage.write(DealDamage {
                                 target: event.collider2,
                                 amount: 5.,

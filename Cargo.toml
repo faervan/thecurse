@@ -30,6 +30,10 @@ avian3d = { version = "0.5", default-features = false, features = [
   "serialize",
 ] }
 bevy_skein.version = "0.5"
+vleue_navigator = { version = "0.15", default-features = false, features = [
+  "avian3d",
+  "detailed-layers",
+] }
 
 # Dev dependencies
 egui = "0.33"

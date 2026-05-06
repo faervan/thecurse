@@ -119,6 +119,7 @@ fn spawn_goblins(
         commands
             .spawn((
                 Goblin,
+                Obstacle,
                 CreatureBundle {
                     name: Name::new("Goblin"),
                     health: Health::new(30.),

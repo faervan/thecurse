@@ -7,6 +7,7 @@ use crate::prelude::*;
 pub fn plugin(app: &mut App) {
     WorldInspectorPlugin::debug_plugin(app);
     PhysicsDebugPlugin::debug_plugin(app);
+    NavMeshDebug::debug_plugin(app);
 }
 
 trait DebugElement: Sized + Send + Sync + 'static {
@@ -110,6 +111,28 @@ impl DebugElement for PhysicsDebugPlugin {
             gizmo_config.enabled = false;
         }
     });
+}
+
+impl DebugElement for NavMeshDebug {
+    const KEY: KeyCode = KeyCode::F5;
+
+    on_enable!(
+        |mut commands: Commands, navmeshes: Query<Entity, With<ManagedNavMesh>>| {
+            for entity in navmeshes {
+                commands
+                    .entity(entity)
+                    .insert(NavMeshDebug(bevy::color::palettes::css::RED.into()));
+            }
+        }
+    );
+
+    on_disable!(
+        |mut commands: Commands, navmeshes: Query<Entity, With<ManagedNavMesh>>| {
+            for entity in navmeshes {
+                commands.entity(entity).remove::<NavMeshDebug>();
+            }
+        }
+    );
 }
 
 #[derive(States)]

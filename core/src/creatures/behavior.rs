@@ -66,7 +66,6 @@ impl CreatureLookForTarget {
                 |event: On<CollisionStart>,
                  sensors: Query<&ChildOf, With<Sensor>>,
                  mut creatures: Query<&mut CreatureSearchSensor>| {
-                    debug!("Collision with {}", event.collider2);
                     let Ok(parent) = sensors.get(event.event_target()) else {
                         return;
                     };
