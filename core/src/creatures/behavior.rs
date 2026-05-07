@@ -178,9 +178,9 @@ pub struct CreatureMoveTowardsTarget {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-struct CreatureNavmeshPath {
-    path: Vec<Vec2>,
-    start: Vec2,
+pub(crate) struct CreatureNavmeshPath {
+    pub(crate) path: Vec<Vec2>,
+    pub(crate) start: Vec2,
     update_timer: Timer,
 }
 
@@ -277,7 +277,6 @@ fn trigger_target_unreachable(commands: &mut Commands, target: Entity) {
 }
 
 fn creature_move_towards_target(
-    mut gizmos: Gizmos,
     mut commands: Commands,
     query: Query<(
         Entity,
@@ -295,16 +294,11 @@ fn creature_move_towards_target(
         let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.normalize_or(Vec3::NEG_Z));
         commands.entity(entity).transition(rotation, 100);
 
-        gizmos.line(
-            transform.translation,
-            next,
-            bevy::color::palettes::css::ORANGE,
-        );
-
         if path.path.len() == 1 && direction.length() <= move_to_target.target_gap {
             trigger_target_reached(&mut commands, entity, velocity);
             continue;
-        } else if direction.length() > (next_step - path.start).length() {
+        } else if direction.length() > (next_step - path.start).length() || direction.length() < 0.5
+        {
             path.path.pop();
             if path.path.is_empty() {
                 trigger_target_reached(&mut commands, entity, velocity);

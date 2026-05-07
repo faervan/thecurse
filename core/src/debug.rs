@@ -30,6 +30,7 @@ trait DebugElement: Sized + Send + Sync + 'static {
     fn plugin(app: &mut App) {}
 
     fn on_enable() -> Option<impl System<In = (), Out = ()>> {
+        // Necessary for compiler type inference
         if false {
             return Some(IntoSystem::into_system(|| {}));
         }
@@ -37,6 +38,7 @@ trait DebugElement: Sized + Send + Sync + 'static {
     }
 
     fn on_disable() -> Option<impl System<In = (), Out = ()>> {
+        // Necessary for compiler type inference
         if false {
             return Some(IntoSystem::into_system(|| {}));
         }
@@ -76,8 +78,7 @@ impl DebugElement for WorldInspectorPlugin {
     fn plugin(app: &mut App) {
         app.add_plugins((
             EguiPlugin::default(),
-            WorldInspectorPlugin::default()
-                .run_if(in_state(DebugElementActive::<WorldInspectorPlugin>::ACTIVE)),
+            Self::default().run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
         ));
     }
 }
@@ -115,6 +116,24 @@ impl DebugElement for PhysicsDebugPlugin {
 
 impl DebugElement for NavMeshDebug {
     const KEY: KeyCode = KeyCode::F5;
+
+    fn plugin(app: &mut App) {
+        app.add_systems(
+            Update,
+            (|mut gizmos: Gizmos, query: Query<(&CreatureNavmeshPath, &Transform)>| {
+                for (path, transform) in query {
+                    let mut last = transform.translation;
+
+                    for next in path.path.iter().rev() {
+                        let next = vec3(next.x, 0., next.y);
+                        gizmos.line(last, next, bevy::color::palettes::css::ORANGE);
+                        last = next;
+                    }
+                }
+            })
+            .run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
+        );
+    }
 
     on_enable!(
         |mut commands: Commands, navmeshes: Query<Entity, With<ManagedNavMesh>>| {
