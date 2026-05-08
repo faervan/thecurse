@@ -96,6 +96,8 @@ struct GoblinHandles {
 struct GoblinBehavior {
     current: GoblinBehaviorState,
     last: GoblinBehaviorState,
+    /// This is used to let goblins finish their attack before considering the next state transition
+    action_interruptable: bool,
 }
 
 impl GoblinBehavior {
@@ -103,6 +105,7 @@ impl GoblinBehavior {
         Self {
             current: state,
             last: state,
+            action_interruptable: true,
         }
     }
 }
@@ -187,6 +190,9 @@ fn update_behavior(
     targets: Query<&Transform>,
 ) {
     for (mut behavior, target_maybe, retry_move_maybe, transform) in query {
+        if !behavior.action_interruptable {
+            continue;
+        }
         let state = if retry_move_maybe.is_none()
             && let Some(target) = target_maybe
             && let Ok(target_transform) = targets.get(**target)
@@ -195,7 +201,12 @@ fn update_behavior(
             match distance {
                 d if d > GOBLIN_ATTACK_RANGE_MAX => GoblinBehaviorState::MovingForwards,
                 d if d < GOBLIN_ATTACK_RANGE_MIN => GoblinBehaviorState::MovingBackwards,
-                _ => GoblinBehaviorState::Attacking,
+                _ => {
+                    if behavior.action_interruptable {
+                        behavior.action_interruptable = false;
+                    }
+                    GoblinBehaviorState::Attacking
+                }
             }
         } else {
             GoblinBehaviorState::Idle
@@ -298,14 +309,20 @@ fn attack(
         &mut GoblinBehavior,
         &GltfAnimationTarget,
         &Transform,
-        &CreatureTarget,
+        Option<&CreatureTarget>,
     )>,
     players: Query<&AnimationPlayer>,
     targets: Query<&Transform>,
 ) {
-    for (entity, mut behavior, animation_target, transform, target) in query {
-        if behavior.current == GoblinBehaviorState::Attacking
-            && let Ok(player) = players.get(**animation_target)
+    for (entity, mut behavior, animation_target, transform, target_maybe) in query {
+        if behavior.current != GoblinBehaviorState::Attacking {
+            continue;
+        }
+        let Some(target) = target_maybe else {
+            behavior.action_interruptable = true;
+            continue;
+        };
+        if let Ok(player) = players.get(**animation_target)
             && player.all_finished()
             && let Ok(target_transform) = targets.get(**target)
         {
@@ -313,7 +330,7 @@ fn attack(
                 Vec3::NEG_Z,
                 (transform.translation - target_transform.translation)
                     .with_y(0.)
-                    .normalize(),
+                    .normalize_or(Vec3::NEG_Z),
             );
             commands.entity(entity).transition(rotation, 100);
 
@@ -321,6 +338,8 @@ fn attack(
             // ensure that the `behavior_changes` system does nothing while the
             // `update_goblin_animtation` will restart the animation.
             behavior.last = GoblinBehaviorState::Attacking;
+
+            behavior.action_interruptable = true;
         }
     }
 }
