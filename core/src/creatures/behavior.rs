@@ -311,6 +311,7 @@ fn update_direction_to_target(
         With<CreatureMoveAwayFromTarget>,
     >,
     targets: Query<&Transform>,
+    mut fallback_rotation_offset: Local<f32>,
 ) {
     for (entity, direction_maybe, target, transform) in query {
         let Some(mut direction) = direction_maybe else {
@@ -320,7 +321,11 @@ fn update_direction_to_target(
             commands
                 .entity(entity)
                 .try_insert(CreatureDirectionToTarget {
-                    direction: (target_transform.translation - transform.translation).with_y(0.),
+                    direction: get_direction(
+                        transform,
+                        target_transform,
+                        &mut fallback_rotation_offset,
+                    ),
                     timer: Timer::new(Duration::from_millis(200), TimerMode::Repeating),
                 });
             continue;
@@ -329,9 +334,22 @@ fn update_direction_to_target(
         if direction.timer.just_finished()
             && let Ok(target_transform) = targets.get(**target)
         {
-            direction.direction = (target_transform.translation - transform.translation).with_y(0.);
+            direction.direction =
+                get_direction(transform, target_transform, &mut fallback_rotation_offset);
         }
     }
+}
+
+fn get_direction(
+    from: &Transform,
+    to: &Transform,
+    fallback_rotation_offset: &mut Local<f32>,
+) -> Vec3 {
+    let fallback = Quat::from_rotation_y(fallback_rotation_offset.sin());
+    **fallback_rotation_offset += 1.;
+    (to.translation - from.translation)
+        .with_y(0.)
+        .normalize_or(fallback * Vec3::NEG_Z)
 }
 
 fn creature_move_away_from_target(
@@ -344,10 +362,9 @@ fn creature_move_away_from_target(
     )>,
 ) {
     for (entity, move_from_target, direction, mut velocity) in query {
-        let rotation =
-            Quat::from_rotation_arc(Vec3::NEG_Z, -direction.direction.normalize_or(Vec3::NEG_Z));
+        let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.direction);
         commands.entity(entity).transition(rotation, 100);
 
-        velocity.0 = -direction.direction.normalize_or_zero() * move_from_target.speed;
+        velocity.0 = -direction.direction * move_from_target.speed;
     }
 }

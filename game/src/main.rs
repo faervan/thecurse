@@ -43,8 +43,6 @@ fn main() {
         set_state_game.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
     );
 
-    app.add_systems(OnEnter(AppState::Game), demo);
-
     app.run();
 }
 
@@ -57,16 +55,4 @@ pub enum AppState {
 
 fn set_state_game(mut next_state: ResMut<NextState<AppState>>) {
     next_state.set(AppState::Game);
-}
-
-fn demo(mut goblin_spawner: MessageWriter<SpawnGoblin>) {
-    let mut rng = rand::rng();
-    use rand::RngExt as _;
-    for _ in 0..80 {
-        let x = rng.random_range(-50_f32..50_f32);
-        let z = rng.random_range(-50_f32..50_f32);
-        goblin_spawner.write(SpawnGoblin {
-            position: Vec3::new(x, 1., z),
-        });
-    }
 }

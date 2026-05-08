@@ -58,6 +58,7 @@ bitflags = "2.10"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 rand = "0.10"
+ambassador = "0.5"
 
 [workspace.lints.rust]
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.

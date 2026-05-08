@@ -22,8 +22,10 @@ pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
 pub use crate::navmesh::Obstacle;
 
+pub use crate::items::{Item, ItemEffect as _};
+
 pub use crate::creatures::behavior::*;
-pub use crate::creatures::goblin::SpawnGoblin;
+pub use crate::creatures::goblin::{Goblin, SpawnGoblin};
 pub use crate::creatures::health::*;
 pub use crate::creatures::weapon::{WeaponColliderHandle, WeaponSocketHandle};
 pub use crate::creatures::{Creature, CreatureBundle};

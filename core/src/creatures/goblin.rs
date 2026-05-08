@@ -121,7 +121,7 @@ enum GoblinBehaviorState {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-struct Goblin;
+pub struct Goblin;
 
 impl GltfAssetPath for GoblinHandles {
     const PATH: &'static str = "models/Goblin.glb";

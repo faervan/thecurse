@@ -5,6 +5,7 @@ pub mod animation;
 pub mod assets;
 pub mod creatures;
 pub mod debug;
+pub mod items;
 mod navmesh;
 pub mod utils;
 
