@@ -11,6 +11,7 @@
     Encountered a panic in system `bevy_app::main_schedule::Main::run_main`!
     ```
     - Appears to happen only or at least deterministically when the player is invisible
+- [ ] Goblins Idle animation is interrupted when they retry path finding
 
 # Features
 - [ ] implement enforce LoS in creature target finding

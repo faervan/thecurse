@@ -13,6 +13,8 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
                 insert_creature_navmesh_paths,
                 update_creature_paths,
                 creature_move_towards_target,
+                update_direction_to_target,
+                creature_move_away_from_target,
             )
                 .run_if(in_state(game_state)),
         );
@@ -23,17 +25,9 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 #[reflect(Component)]
 pub struct CreatureTarget(Entity);
 
-#[derive(EntityEvent)]
-pub struct CreatureTargetFound(Entity);
-
-#[derive(EntityEvent)]
-pub struct CreatureTargetLost(Entity);
-
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 #[component(on_add)]
-/// Will trigger a [`CreatureTargetFound`] event when a target was found and a
-/// [`CreatureTargetLost`] when the target was lost.
 pub struct CreatureLookForTarget {
     pub search_radius: f32,
     /// TODO!
@@ -120,10 +114,7 @@ fn find_targets(
                 }
             })
         {
-            commands
-                .entity(entity)
-                .insert(CreatureTarget(closest))
-                .trigger(CreatureTargetFound);
+            commands.entity(entity).try_insert(CreatureTarget(closest));
             debug!("Creature found target {closest}");
             commands
                 .entity(search.sensor)
@@ -149,13 +140,10 @@ fn remove_targets(
             transform.translation.distance(target_transform.translation)
                 > config.max_follow_distance
         }) {
+            commands.entity(entity).remove::<CreatureTarget>();
             commands
-                .entity(entity)
-                .remove::<CreatureTarget>()
-                .trigger(CreatureTargetLost);
-            if let Ok(mut entity_cmds) = commands.get_entity(search.sensor) {
-                entity_cmds.insert((Collider::sphere(config.search_radius), Sensor));
-            }
+                .entity(search.sensor)
+                .try_insert((Collider::sphere(config.search_radius), Sensor));
 
             debug!("Creature {entity} lost its target!");
         }
@@ -164,15 +152,10 @@ fn remove_targets(
 
 #[derive(Component, Reflect, Debug, Default)]
 #[reflect(Component)]
-/// Make the creature walk towards its [`CreatureTarget`]. Once it reached the target, this
-/// component will be removed and a [`CreatureReachedTarget`] event will be fired.
+/// Make the creature walk towards its [`CreatureTarget`].
 /// If the target can't be reached, a [`CreatureTargetUnreachable`] event will be fired instead.
 /// This will also rotate the creature towards the target.
 pub struct CreatureMoveTowardsTarget {
-    /// Gap between the creature and its target that is still interpreted as "creature reached
-    /// target". Once the distance between the creature and the target is smaller or equal to this
-    /// value, the target is considered to be reached by the creature.
-    pub target_gap: f32,
     pub speed: f32,
 }
 
@@ -183,9 +166,6 @@ pub(crate) struct CreatureNavmeshPath {
     pub(crate) start: Vec2,
     update_timer: Timer,
 }
-
-#[derive(EntityEvent, Debug)]
-pub struct CreatureReachedTarget(Entity);
 
 #[derive(EntityEvent, Debug)]
 pub struct CreatureTargetUnreachable(Entity);
@@ -272,7 +252,7 @@ fn get_creature_path(
 fn trigger_target_unreachable(commands: &mut Commands, target: Entity) {
     commands
         .entity(target)
-        .remove::<CreatureMoveTowardsTarget>()
+        .remove::<(CreatureMoveTowardsTarget, CreatureNavmeshPath)>()
         .trigger(CreatureTargetUnreachable);
 }
 
@@ -287,38 +267,87 @@ fn creature_move_towards_target(
     )>,
 ) {
     for (entity, transform, mut path, move_to_target, mut velocity) in query {
-        let next_step = path.path.last().unwrap();
+        let Some(next_step) = path.path.last() else {
+            continue;
+        };
 
         let next = vec3(next_step.x, 0., next_step.y);
         let direction = (next - transform.translation).with_y(0.);
         let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.normalize_or(Vec3::NEG_Z));
         commands.entity(entity).transition(rotation, 100);
 
-        if path.path.len() == 1 && direction.length() <= move_to_target.target_gap {
-            trigger_target_reached(&mut commands, entity, velocity);
-            continue;
-        } else if direction.length() > (next_step - path.start).length() || direction.length() < 0.5
-        {
+        if direction.length() < 0.5 || direction.length() > (next_step - path.start).length() {
             path.path.pop();
-            if path.path.is_empty() {
-                trigger_target_reached(&mut commands, entity, velocity);
-                continue;
-            }
         }
         velocity.0 = direction.normalize_or_zero() * move_to_target.speed;
     }
 }
 
-fn trigger_target_reached(
-    commands: &mut Commands,
-    target: Entity,
-    mut velocity: Mut<LinearVelocity>,
+#[derive(Component, Reflect, Debug, Default)]
+#[reflect(Component)]
+/// Make the creature walk away from its [`CreatureTarget`].
+/// This will also rotate the creature towards the target.
+pub struct CreatureMoveAwayFromTarget {
+    pub speed: f32,
+}
+
+#[derive(Component, Reflect, Debug, Default)]
+#[reflect(Component)]
+pub(super) struct CreatureDirectionToTarget {
+    direction: Vec3,
+    timer: Timer,
+}
+
+fn update_direction_to_target(
+    time: Res<Time>,
+    mut commands: Commands,
+    query: Query<
+        (
+            Entity,
+            Option<&mut CreatureDirectionToTarget>,
+            &CreatureTarget,
+            &Transform,
+        ),
+        With<CreatureMoveAwayFromTarget>,
+    >,
+    targets: Query<&Transform>,
 ) {
-    if velocity.0 != Vec3::ZERO {
-        velocity.0 = Vec3::ZERO;
+    for (entity, direction_maybe, target, transform) in query {
+        let Some(mut direction) = direction_maybe else {
+            let Ok(target_transform) = targets.get(**target) else {
+                continue;
+            };
+            commands
+                .entity(entity)
+                .try_insert(CreatureDirectionToTarget {
+                    direction: (target_transform.translation - transform.translation).with_y(0.),
+                    timer: Timer::new(Duration::from_millis(200), TimerMode::Repeating),
+                });
+            continue;
+        };
+        direction.timer.tick(time.delta());
+        if direction.timer.just_finished()
+            && let Ok(target_transform) = targets.get(**target)
+        {
+            direction.direction = (target_transform.translation - transform.translation).with_y(0.);
+        }
     }
-    if let Ok(mut cmds) = commands.get_entity(target) {
-        cmds.remove::<(CreatureMoveTowardsTarget, CreatureNavmeshPath)>()
-            .trigger(CreatureReachedTarget);
+}
+
+fn creature_move_away_from_target(
+    mut commands: Commands,
+    query: Query<(
+        Entity,
+        &CreatureMoveAwayFromTarget,
+        &CreatureDirectionToTarget,
+        &mut LinearVelocity,
+    )>,
+) {
+    for (entity, move_from_target, direction, mut velocity) in query {
+        let rotation =
+            Quat::from_rotation_arc(Vec3::NEG_Z, -direction.direction.normalize_or(Vec3::NEG_Z));
+        commands.entity(entity).transition(rotation, 100);
+
+        velocity.0 = -direction.direction.normalize_or_zero() * move_from_target.speed;
     }
 }
