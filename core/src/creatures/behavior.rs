@@ -183,7 +183,6 @@ fn insert_creature_navmesh_paths(
     targets: Query<&Transform>,
 ) {
     let Some(navmesh) = navmeshes.get(ManagedNavMesh::from_id(0)) else {
-        warn!("No NavMesh available");
         return;
     };
     for (entity, transform, target) in query {
@@ -214,7 +213,6 @@ fn update_creature_paths(
 ) {
     let delta = time.delta();
     let Some(navmesh) = navmeshes.get(ManagedNavMesh::from_id(0)) else {
-        warn!("No NavMesh available");
         return;
     };
     for (entity, transform, target, mut navmesh_path) in query {

@@ -2,6 +2,7 @@ use thecurse_core::{CameraControllerPlugin, asset_plugin, assets::all_assets_loa
 
 use crate::prelude::*;
 
+mod noise_test;
 mod player;
 mod prelude;
 mod scenes;
@@ -35,6 +36,7 @@ fn main() {
         CameraControllerPlugin::new(AppState::Game),
         player::plugin,
         scenes::plugin,
+        noise_test::plugin,
     ));
 
     // States
