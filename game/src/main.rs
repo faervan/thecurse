@@ -16,6 +16,8 @@ fn main() {
                 primary_window: Some(Window {
                     title: "The Curse".to_string(),
                     name: Some("thecurse".to_string()),
+                    // TODO! This needs to be AutoVsync if not on wayland
+                    present_mode: bevy::window::PresentMode::Mailbox,
                     ..Default::default()
                 }),
                 ..Default::default()

@@ -13,6 +13,8 @@ dev = [
   "bevy/file_watcher",
   # Enables hot reload for in-memory asset providers
   "bevy/embedded_watcher",
+  # Needed for https://github.com/Lommix/bevy_inspector.nvim
+  "bevy/bevy_remote",
   "dep:bevy-inspector-egui",
   "vleue_navigator/debug-with-gizmos",
 ]
