@@ -1,29 +1,57 @@
 #import bevy_pbr::forward_io::VertexOutput;
 #import bevy_pbr::mesh_view_bindings::globals;
+#import bevy_render::maths::PI_2;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 	let points = 50.;
+	let seed = 0.914282;
 
-	let x = sample_point_2d(in.uv.x * points);
-	let y = sample_point_2d(in.uv.y * points);
+	let px = in.uv.x * points;
+	let py = in.uv.y * points;
 
-	if mix(x, y, 0.5) < sin(globals.time) {
+	let fx = fract(px);
+	let fy = fract(py);
+
+	let x0 = px - fx;
+	let x1 = x0 + 1.;
+	let y0 = py - fy;
+	let y1 = y0 + 1.;
+
+	let center = in.uv * points;
+	let tl = gradient(vec2(x0, y0), center, seed);
+	let tr = gradient(vec2(x1, y0), center, seed);
+	let bl = gradient(vec2(x0, y1), center, seed);
+	let br = gradient(vec2(x1, y1), center, seed);
+
+	let top = mix(tl, tr, fx);
+	let bottom = mix(bl, br, fx);
+
+	if mix(top, bottom, fy) * 2. < sin(globals.time) {
 		return vec4(0., 0., 0., 1.);
 	} else {
 		return vec4(1., 0., 0., 1.);
 	}
 }
 
-fn sample_point_2d(px: f32) -> f32 {
-	let prev = px - fract(px);
-	let next = prev + 1.;
+fn gradient(corner: vec2f, center: vec2f, seed: f32) -> f32 {
+	let angle = hash2(corner * seed) * PI_2;
+	let random_direction = rotate_vec2(vec2(0., 1.), angle);
+	return dot(random_direction, corner - center);
+}
 
-	// Random value between -1 and 1
-	let prev_v = hash(19.26 + prev) * 2. - 1.;
-	let next_v = hash(19.26 + next) * 2. - 1.;
+fn rotate_vec2(in: vec2f, angle: f32) -> vec2f {
+	let s = sin(angle);
+	let c = cos(angle);
 
-	return mix(prev_v, next_v, fract(px));
+	return vec2(
+		in.x * c - in.y * s,
+		in.x * s + in.y * c
+	);
+}
+
+fn hash2(v: vec2f) -> f32 {
+	return hash(dot(v, vec2(5742.948, 198.43)));
 }
 
 fn hash(v: f32) -> f32 {
