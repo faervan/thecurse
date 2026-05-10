@@ -4,56 +4,51 @@
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-	let points = 50.;
-	let seed = 0.914282;
+	// https://darkeclipz.github.io/fractals/paper/Fractals%20&%20Rendering%20Techniques.html
+	let n = 32.;
+	let b = 4.;
+	var uv = in.uv * 2. - 1.;
+	uv.x -= 0.5;
 
-	let px = in.uv.x * points;
-	let py = in.uv.y * points;
+	var z = vec2(0.);
+	let c = uv;
 
-	let fx = fract(px);
-	let fy = fract(py);
+	var i: f32;
+	for (i = 0.; i < n; i += 1.) {
+		z = mat2x2(z, vec2(-z.y, z.x)) * z + c;
+		if dot(z, z) > b * b {
+			break;
+		}
+	}
 
-	let x0 = px - fx;
-	let x1 = x0 + 1.;
-	let y0 = py - fy;
-	let y1 = y0 + 1.;
+	// Smooth iteration count to get rid of color bands
+	i -= log(log(dot(z, z)) / log(b)) / log(2.);
 
-	let center = in.uv * points;
-	let tl = gradient(vec2(x0, y0), center, seed);
-	let tr = gradient(vec2(x1, y0), center, seed);
-	let bl = gradient(vec2(x0, y1), center, seed);
-	let br = gradient(vec2(x1, y1), center, seed);
-
-	let top = mix(tl, tr, fx);
-	let bottom = mix(bl, br, fx);
-
-	if mix(top, bottom, fy) * 2. < sin(globals.time) {
-		return vec4(0., 0., 0., 1.);
+	if i == n {
+		return vec4(vec3(0.), 1.);
+		return color(0.);
 	} else {
-		return vec4(1., 0., 0., 1.);
+		return color(i / n);
 	}
 }
 
-fn gradient(corner: vec2f, center: vec2f, seed: f32) -> f32 {
-	let angle = hash2(corner * seed) * PI_2;
-	let random_direction = rotate_vec2(vec2(0., 1.), angle);
-	return dot(random_direction, corner - center);
+fn palette1() -> mat4x3f {
+	let a = vec3(0.938, 0.328, 0.718);
+	// let b = vec3(0.659, 0.438, 0.328);
+	let b = a;
+	// let c = vec3(0.388, 0.388, 0.296);
+	let c = a;
+	let d = vec3(2.538, 2.478, 0.168);
+	return mat4x3f(a, b, c, d);
 }
 
-fn rotate_vec2(in: vec2f, angle: f32) -> vec2f {
-	let s = sin(angle);
-	let c = cos(angle);
+// https://dev.thi.ng/gradients/
+fn color(t: f32) -> vec4f {
+	let palette = palette1();
+	let a = palette[0];
+	let b = palette[1];
+	let c = palette[2];
+	let d = palette[3];
 
-	return vec2(
-		in.x * c - in.y * s,
-		in.x * s + in.y * c
-	);
-}
-
-fn hash2(v: vec2f) -> f32 {
-	return hash(dot(v, vec2(5742.948, 198.43)));
-}
-
-fn hash(v: f32) -> f32 {
-	return fract(sin(v) * 3821.492173);
+	return vec4(a + b * cos(PI_2 * (c * t + d)), 1.);
 }
