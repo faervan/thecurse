@@ -5,11 +5,33 @@
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 	// https://darkeclipz.github.io/fractals/paper/Fractals%20&%20Rendering%20Techniques.html
-	let n = 32.;
-	let b = 4.;
-	var uv = in.uv * 2. - 1.;
-	uv.x -= 0.5;
+	let n = 1024.;
+	let b = 256.;
+	let sample_count = 16.;
 
+	var frag_color: vec3f;
+
+	let centered = in.uv - 0.5;
+	let animated_uv = rotate_vec2(centered, fract(globals.time) * PI_2) + 0.5;
+
+	for (var i = 0.; i < sample_count; i += 1) {
+		var uv = in.uv * 2. - 1.;
+		// var uv = animated_uv * 2. - 1.;
+		// jitter
+		uv += hash2(uv) * 0.01;
+		// zoom
+		uv *= 0.001;
+		// move
+		uv -= vec2(.908, -0.23527);
+
+		let sample = sample_point(uv, n, b);
+		frag_color += color(sample);
+	}
+
+	return vec4(frag_color / sample_count, 1.);
+}
+
+fn sample_point(uv: vec2f, n: f32, b: f32) -> f32 {
 	var z = vec2(0.);
 	let c = uv;
 
@@ -24,12 +46,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 	// Smooth iteration count to get rid of color bands
 	i -= log(log(dot(z, z)) / log(b)) / log(2.);
 
-	if i == n {
-		return vec4(vec3(0.), 1.);
-		return color(0.);
-	} else {
-		return color(i / n);
-	}
+	return i / n;
 }
 
 fn palette1() -> mat4x3f {
@@ -43,12 +60,30 @@ fn palette1() -> mat4x3f {
 }
 
 // https://dev.thi.ng/gradients/
-fn color(t: f32) -> vec4f {
+fn color(t: f32) -> vec3f {
 	let palette = palette1();
 	let a = palette[0];
 	let b = palette[1];
 	let c = palette[2];
 	let d = palette[3];
 
-	return vec4(a + b * cos(PI_2 * (c * t + d)), 1.);
+	return vec3(a + b * cos(PI_2 * (c * t + d)));
+}
+
+fn hash(p: vec2f) -> f32 {
+	return fract(sin(dot(p, vec2(9843.0218, 827.9137))) * 2874.042981);
+}
+
+fn hash2(p: vec2f) -> vec2f {
+	return vec2(hash(p), fract(sin(hash(p)) * 134.10482));
+}
+
+fn rotate_vec2(in: vec2f, angle: f32) -> vec2f {
+	let s = sin(angle);
+	let c = cos(angle);
+
+	return vec2(
+		in.x * c - in.y * s,
+		in.x * s + in.y * c
+	);
 }
