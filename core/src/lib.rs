@@ -7,6 +7,7 @@ pub mod creatures;
 pub mod debug;
 pub mod items;
 mod navmesh;
+pub mod shader_utils;
 pub mod utils;
 
 mod shared;
@@ -30,6 +31,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             assets::plugin,
             utils::follow::FollowUtilPlugin::new(game_state),
             utils::billboard::plugin(game_state),
+            shader_utils::plugin,
             animation::AnimationPlugin,
             navmesh::plugin(game_state),
             creatures::plugin(game_state),
