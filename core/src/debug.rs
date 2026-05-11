@@ -1,11 +1,13 @@
 use std::{fmt::Debug, hash::Hash};
 
+use bevy::dev_tools::picking_debug::{DebugPickingMode, DebugPickingPlugin};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
 use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
     WorldInspectorPlugin::debug_plugin(app);
+    DebugPickingPlugin::debug_plugin(app);
     PhysicsDebugPlugin::debug_plugin(app);
     NavMeshDebug::debug_plugin(app);
 }
@@ -81,6 +83,23 @@ impl DebugElement for WorldInspectorPlugin {
             Self::default().run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
         ));
     }
+}
+
+impl DebugElement for DebugPickingPlugin {
+    const KEY: KeyCode = KeyCode::F3;
+
+    fn plugin(app: &mut App) {
+        app.add_plugins(DebugPickingPlugin);
+        app.insert_resource(DebugPickingMode::Disabled);
+    }
+
+    on_enable!(|mut mode: ResMut<DebugPickingMode>| {
+        *mode = DebugPickingMode::Normal;
+    });
+
+    on_disable!(|mut mode: ResMut<DebugPickingMode>| {
+        *mode = DebugPickingMode::Disabled;
+    });
 }
 
 impl DebugElement for PhysicsDebugPlugin {

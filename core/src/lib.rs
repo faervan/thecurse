@@ -22,12 +22,15 @@ pub use camera_controller::*;
 
 pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
+        // Ecosystem plugins
+        app.add_plugins((PhysicsPlugins::default(), PhysicsPickingPlugin));
         app.add_plugins(bevy_skein::SkeinPlugin::default());
         app.add_plugins((
             VleueNavigatorPlugin,
             NavmeshUpdaterPlugin::<Collider, Obstacle>::default(),
         ));
 
+        // Custom plugins
         app.add_plugins((
             assets::plugin,
             utils::follow::FollowUtilPlugin::new(game_state),

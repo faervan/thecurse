@@ -25,9 +25,6 @@ fn main() {
             .set(asset_plugin()),
     );
 
-    // Ecosystem plugins
-    app.add_plugins(PhysicsPlugins::default());
-
     // Custom plugins
     app.add_plugins((
         thecurse_core::default_plugins(AppState::Game),

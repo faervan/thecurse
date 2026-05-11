@@ -46,6 +46,7 @@ fn spawn(
             ..Default::default()
         })),
         children![(
+            Name::new("Ground Collider"),
             RigidBody::Static,
             Collider::cuboid(100., 1., 100.),
             CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
