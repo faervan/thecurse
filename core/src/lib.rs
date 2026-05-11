@@ -7,7 +7,8 @@ pub mod creatures;
 pub mod debug;
 pub mod items;
 mod navmesh;
-pub mod shader_utils;
+mod shader_utils;
+pub mod terrain;
 pub mod utils;
 
 mod shared;
@@ -36,6 +37,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             navmesh::plugin(game_state),
             creatures::plugin(game_state),
             character_controller::plugin(game_state),
+            terrain::plugin(game_state),
         ));
     }
 }
