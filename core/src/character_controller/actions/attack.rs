@@ -52,13 +52,15 @@ fn update_attack_state(
                         timer: Timer::new(Duration::from_millis(500), TimerMode::Once),
                         ty: AttackType::SwingBottom,
                     };
-                } else if input.pressed(KeyCode::KeyR) {
+                } else if input.pressed(KeyCode::KeyR)
+                    && let Some(position) = **cursor_target
+                {
                     *attack_state = AttackState::Attacking {
                         timer: Timer::new(Duration::from_millis(200), TimerMode::Once),
                         ty: AttackType::CastVoid,
                     };
                     cast_spell.write(SpawnSpellVoid {
-                        position: **cursor_target,
+                        position,
                         caster: entity,
                     });
                 }

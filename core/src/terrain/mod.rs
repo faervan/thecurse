@@ -12,7 +12,7 @@ pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             ExtendedMaterial<StandardMaterial, TerrainMaterial>,
         >::default());
 
-        app.add_systems(OnEnter(game_state), setup);
+        app.add_systems(OnEnter(game_state), setup.run_if(|| false));
     }
 }
 

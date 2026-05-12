@@ -118,7 +118,9 @@ impl DebugElement for PhysicsDebugPlugin {
         app.add_systems(
             Update,
             (|mut gizmos: Gizmos, cursor_target: Res<CursorTargetPosition>| {
-                gizmos.sphere(**cursor_target, 0.2, Color::srgb(0.5, 0.5, 0.1));
+                if let Some(position) = **cursor_target {
+                    gizmos.sphere(position, 0.2, Color::srgb(0.5, 0.5, 0.1));
+                }
             })
             .run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
         );
