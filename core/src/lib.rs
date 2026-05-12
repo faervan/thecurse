@@ -1,4 +1,5 @@
 pub mod prelude;
+use bevy::window::{CursorOptions, PrimaryWindow};
 use prelude::*;
 
 pub mod animation;
@@ -47,6 +48,8 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             spells::plugin(game_state),
             terrain::plugin(game_state),
         ));
+
+        app.add_systems(OnExit(game_state), (despawn_game_entities, show_cursor));
     }
 }
 
@@ -59,4 +62,20 @@ pub fn asset_plugin() -> AssetPlugin {
         file_path: "../assets".to_string(),
         ..Default::default()
     }
+}
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+/// Marks an entity as to be despawned when the app leaves the game state
+pub struct GameEntity;
+
+fn despawn_game_entities(mut commands: Commands, query: Query<Entity, With<GameEntity>>) {
+    for entity in query {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn show_cursor(mut cursor: Single<&mut CursorOptions, With<PrimaryWindow>>) {
+    cursor.visible = true;
+    cursor.grab_mode = bevy::window::CursorGrabMode::None;
 }

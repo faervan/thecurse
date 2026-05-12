@@ -2,6 +2,7 @@ use thecurse_core::{CameraControllerPlugin, asset_plugin, assets::all_assets_loa
 
 use crate::prelude::*;
 
+mod menu;
 mod player;
 mod prelude;
 mod scenes;
@@ -30,6 +31,7 @@ fn main() {
         thecurse_core::default_plugins(AppState::Game),
         thecurse_core::debug::plugin,
         CameraControllerPlugin::new(AppState::Game),
+        menu::plugin,
         player::plugin,
         scenes::plugin,
     ));
@@ -39,7 +41,11 @@ fn main() {
 
     app.add_systems(
         Update,
-        set_state_game.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
+        (
+            set_state_menu.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
+            set_state_menu
+                .run_if(in_state(AppState::Game).and(input_just_pressed(KeyCode::Escape))),
+        ),
     );
 
     app.run();
@@ -49,9 +55,10 @@ fn main() {
 pub enum AppState {
     #[default]
     Loading,
+    Menu,
     Game,
 }
 
-fn set_state_game(mut next_state: ResMut<NextState<AppState>>) {
-    next_state.set(AppState::Game);
+fn set_state_menu(mut next_state: ResMut<NextState<AppState>>) {
+    next_state.set(AppState::Menu);
 }

@@ -70,6 +70,7 @@ fn spawn_voids(
             ForwardDecal,
             MeshMaterial3d(material),
             Transform::from_translation(spawn.position + Vec3::Y * 0.1).with_scale(Vec3::splat(3.)),
+            GameEntity,
         ));
     }
 }

@@ -20,6 +20,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
+#[require(GameEntity)]
 pub struct Creature;
 
 #[derive(Bundle)]

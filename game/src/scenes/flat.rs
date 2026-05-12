@@ -53,6 +53,7 @@ fn spawn(
             CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
             Transform::from_xyz(0., -0.5, 0.)
         )],
+        GameEntity,
     ));
 
     commands.spawn((
@@ -64,6 +65,7 @@ fn spawn(
             shadows_enabled: true,
             ..Default::default()
         },
+        GameEntity,
     ));
 
     commands.spawn((
@@ -79,5 +81,6 @@ fn spawn(
         RigidBody::Static,
         Collider::cuboid(5., 5., 5.),
         CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
+        GameEntity,
     ));
 }

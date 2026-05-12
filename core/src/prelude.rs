@@ -12,6 +12,7 @@ pub use bevy::platform::collections::{HashMap, HashSet};
 pub use bevy::prelude::*;
 pub use vleue_navigator::prelude::*;
 
+pub use crate::GameEntity;
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::GameLayer;

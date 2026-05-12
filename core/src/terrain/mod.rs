@@ -32,6 +32,7 @@ fn setup(
             extension: TerrainMaterial {},
         })),
         Transform::from_xyz(0., 0.5, 0.),
+        GameEntity,
     ));
 }
 

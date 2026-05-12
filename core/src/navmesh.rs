@@ -32,5 +32,6 @@ fn setup(mut commands: Commands) {
         },
         NavMeshUpdateMode::Direct,
         Transform::from_xyz(0.0, 0.1, 0.0).with_rotation(Quat::from_rotation_x(FRAC_PI_2)),
+        GameEntity,
     ));
 }
