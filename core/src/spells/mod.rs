@@ -97,7 +97,19 @@ fn drive_void_spells(
                         Sensor,
                         DamageSource::new(spell.caster, 4.),
                     ))
-                    .observe(on_collision_deal_damage);
+                    .observe(crate::on_collision_deal_damage_and!(
+                        Commands,
+                        |event, _source, params| {
+                            let mut commands = params;
+                            commands.entity(event.collider2).try_insert((
+                                CrowdControlled(event.collider1),
+                                CCPullTowards {
+                                    target: event.collider1,
+                                    intensity: 20.,
+                                },
+                            ));
+                        }
+                    ));
             }
         }
     }

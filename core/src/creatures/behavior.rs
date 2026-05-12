@@ -258,13 +258,16 @@ fn trigger_target_unreachable(commands: &mut Commands, target: Entity) {
 
 fn creature_move_towards_target(
     mut commands: Commands,
-    query: Query<(
-        Entity,
-        &Transform,
-        &mut CreatureNavmeshPath,
-        &CreatureMoveTowardsTarget,
-        &mut LinearVelocity,
-    )>,
+    query: Query<
+        (
+            Entity,
+            &Transform,
+            &mut CreatureNavmeshPath,
+            &CreatureMoveTowardsTarget,
+            &mut LinearVelocity,
+        ),
+        Without<CrowdControlled>,
+    >,
 ) {
     for (entity, transform, mut path, move_to_target, mut velocity) in query {
         let Some(next_step) = path.path.last() else {
@@ -354,12 +357,15 @@ fn get_direction(
 
 fn creature_move_away_from_target(
     mut commands: Commands,
-    query: Query<(
-        Entity,
-        &CreatureMoveAwayFromTarget,
-        &CreatureDirectionToTarget,
-        &mut LinearVelocity,
-    )>,
+    query: Query<
+        (
+            Entity,
+            &CreatureMoveAwayFromTarget,
+            &CreatureDirectionToTarget,
+            &mut LinearVelocity,
+        ),
+        Without<CrowdControlled>,
+    >,
 ) {
     for (entity, move_from_target, direction, mut velocity) in query {
         let rotation = Quat::from_rotation_arc(Vec3::NEG_Z, -direction.direction);

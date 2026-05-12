@@ -25,6 +25,7 @@ pub use crate::navmesh::Obstacle;
 pub use crate::items::{Item, ItemEffect as _};
 
 pub use crate::creatures::behavior::*;
+pub use crate::creatures::crowd_control::*;
 pub use crate::creatures::goblin::{Goblin, SpawnGoblin};
 pub use crate::creatures::health::*;
 pub use crate::creatures::weapon::{WeaponColliderHandle, WeaponSocketHandle};

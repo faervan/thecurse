@@ -82,6 +82,33 @@ pub fn on_collision_deal_damage(
     });
 }
 
+#[macro_export]
+macro_rules! on_collision_deal_damage_and {
+    ($params:ty, |$e:ident, $s:ident, $p:ident| $apply:block) => {
+        |event: On<CollisionStart>,
+         mut damage: MessageWriter<DealDamage>,
+         mut sources: Query<&mut DamageSource>,
+         params: $params| {
+            let Ok(mut source) = sources.get_mut(event.collider1) else {
+                return;
+            };
+            if source.entity == event.collider2 || source.ignore.contains(&event.collider2) {
+                return;
+            }
+            let $e = &event;
+            let $s = &mut source;
+            let $p = params;
+            $apply
+            source.ignore.insert(event.collider2);
+            damage.write(DealDamage {
+                target: event.collider2,
+                source: source.entity,
+                amount: source.damage,
+            });
+        }
+    };
+}
+
 fn apply_damage(
     mut damage_reader: MessageReader<DealDamage>,
     mut query: Query<&mut Health>,
