@@ -32,7 +32,7 @@ pub use crate::creatures::{Creature, CreatureBundle};
 
 pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
 pub use crate::character_controller::actions::InterruptAction;
-pub use crate::character_controller::cursor_target::{CursorTargetPosition, CursorTargetSurface};
+pub use crate::character_controller::cursor_target::CursorTargetPosition;
 pub use crate::character_controller::{MainCharacter, Player, PlayerCharacterHandle, SpawnPlayer};
 
 pub use crate::spells::SpawnSpellVoid;
