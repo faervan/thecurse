@@ -5,7 +5,7 @@
 	mesh_normal_local_to_world,
 };
 
-#import thecurse::gradient_noise::noise_2d;
+#import thecurse::utils::gradient_noise::noise_2d;
 
 @vertex
 fn vs_main(in: Vertex) -> VertexOutput {

@@ -1,11 +1,16 @@
 use crate::{character_controller::actions::CharacterActions, prelude::*};
 
 pub mod actions;
+pub mod cursor_target;
 mod inventory;
 
 pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins((actions::plugin(game_state), inventory::plguin(game_state)));
+        app.add_plugins((
+            actions::plugin(game_state),
+            inventory::plguin(game_state),
+            cursor_target::plugin(game_state),
+        ));
 
         app.load_assets_with(|handle: GltfLoadingHandle<PlayerCharacterHandle>, world| {
             let gltf = handle.get_gltf(world);

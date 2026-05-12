@@ -1,4 +1,4 @@
-use bevy::post_process::bloom::Bloom;
+use bevy::{core_pipeline::prepass::DepthPrepass, post_process::bloom::Bloom};
 
 use crate::{
     camera_controller::{CameraController, CameraControllerAnchor, CameraControllerSettings},
@@ -28,7 +28,9 @@ pub fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettin
                     distance: settings.default_distance,
                     origin: Vec3::ZERO,
                 },
+                PhysicsPickable,
                 Camera3d::default(),
+                DepthPrepass,
                 Bloom::NATURAL,
                 #[cfg(feature = "dev")]
                 bevy_inspector_egui::bevy_egui::PrimaryEguiContext,

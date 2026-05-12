@@ -1,4 +1,4 @@
-#define_import_path thecurse::gradient_noise
+#define_import_path thecurse::utils
 
 #import bevy_pbr::forward_io::VertexOutput;
 #import bevy_pbr::mesh_view_bindings::globals;

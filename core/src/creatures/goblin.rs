@@ -1,4 +1,7 @@
-use crate::{creatures::behavior::CreatureDirectionToTarget, prelude::*};
+use crate::{
+    creatures::{behavior::CreatureDirectionToTarget, weapon::BASIC_SWORD_DAMAGE},
+    prelude::*,
+};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -256,9 +259,11 @@ fn behavior_changes(
         }
         match behavior.current {
             GoblinBehaviorState::Attacking => {
-                commands
-                    .entity(**collider_handle)
-                    .try_insert((Collider::cuboid(0.5, 5., 0.3), Sensor));
+                commands.entity(**collider_handle).try_insert((
+                    Collider::cuboid(0.5, 5., 0.3),
+                    Sensor,
+                    DamageSource::new(entity, BASIC_SWORD_DAMAGE),
+                ));
             }
             GoblinBehaviorState::MovingForwards => {
                 commands
@@ -310,11 +315,14 @@ fn attack(
         &GltfAnimationTarget,
         &Transform,
         Option<&CreatureTarget>,
+        &WeaponColliderHandle,
     )>,
+    mut damage_sources: Query<&mut DamageSource>,
     players: Query<&AnimationPlayer>,
     targets: Query<&Transform>,
 ) {
-    for (entity, mut behavior, animation_target, transform, target_maybe) in query {
+    for (entity, mut behavior, animation_target, transform, target_maybe, collider_entity) in query
+    {
         if behavior.current != GoblinBehaviorState::Attacking {
             continue;
         }
@@ -340,6 +348,10 @@ fn attack(
             behavior.last = GoblinBehaviorState::Attacking;
 
             behavior.action_interruptable = true;
+
+            if let Ok(mut source) = damage_sources.get_mut(**collider_entity) {
+                source.ignore = EntityHashSet::new();
+            }
         }
     }
 }

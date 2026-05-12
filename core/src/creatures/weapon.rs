@@ -21,6 +21,8 @@ impl GltfAssetPath for PlayerWeapons {
     const PATH: &'static str = "models/Sword.glb";
 }
 
+pub const BASIC_SWORD_DAMAGE: f32 = 5.;
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct WeaponSocket;
@@ -60,18 +62,12 @@ impl WeaponSocketHandle {
                 id = Some(
                     p.spawn((
                         Transform::from_xyz(0., 4., 0.),
+                        DamageSource::new(hook.entity, BASIC_SWORD_DAMAGE),
                         RigidBody::Kinematic,
                         CollisionEventsEnabled,
                         CollisionLayers::new(GameLayer::WEAPON_MELEE, GameLayer::CREATURE),
                     ))
-                    .observe(
-                        |event: On<CollisionStart>, mut damage: MessageWriter<DealDamage>| {
-                            damage.write(DealDamage {
-                                target: event.collider2,
-                                amount: 5.,
-                            });
-                        },
-                    )
+                    .observe(on_collision_deal_damage)
                     .id(),
                 );
             });

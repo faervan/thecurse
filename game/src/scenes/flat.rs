@@ -47,6 +47,8 @@ fn spawn(
         })),
         children![(
             Name::new("Ground Collider"),
+            CursorTargetSurface,
+            PhysicsPickable,
             RigidBody::Static,
             Collider::cuboid(100., 1., 100.),
             CollisionLayers::new(GameLayer::ENVIRONMENT, GameLayer::all()),
@@ -68,6 +70,8 @@ fn spawn(
     commands.spawn((
         Name::new("Rock"),
         Obstacle,
+        CursorTargetSurface,
+        PhysicsPickable,
         Transform::from_xyz(10., 2.5, 10.),
         Mesh3d(meshes.add(Cuboid::new(5., 5., 5.))),
         MeshMaterial3d(materials.add(StandardMaterial {

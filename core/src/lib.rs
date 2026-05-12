@@ -8,6 +8,7 @@ pub mod debug;
 pub mod items;
 mod navmesh;
 mod shader_utils;
+pub mod spells;
 pub mod terrain;
 pub mod utils;
 
@@ -24,6 +25,9 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
         // Ecosystem plugins
         app.add_plugins((PhysicsPlugins::default(), PhysicsPickingPlugin));
+        app.insert_resource(PhysicsPickingSettings {
+            require_markers: true,
+        });
         app.add_plugins(bevy_skein::SkeinPlugin::default());
         app.add_plugins((
             VleueNavigatorPlugin,
@@ -40,6 +44,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             navmesh::plugin(game_state),
             creatures::plugin(game_state),
             character_controller::plugin(game_state),
+            spells::plugin(game_state),
             terrain::plugin(game_state),
         ));
     }

@@ -36,10 +36,50 @@ impl Health {
     }
 }
 
+#[derive(Component, Reflect, Debug)]
+#[reflect(Component)]
+pub struct DamageSource {
+    pub entity: Entity,
+    pub damage: f32,
+    /// By default, the [`on_collision_deal_damage`] observer will insert any entity that was hit
+    /// into the `ignore` set, so that any damage source can only deal damage once to each entity.
+    pub ignore: EntityHashSet,
+}
+
+impl DamageSource {
+    pub fn new(entity: Entity, damage: f32) -> Self {
+        Self {
+            entity,
+            damage,
+            ignore: EntityHashSet::new(),
+        }
+    }
+}
+
 #[derive(Message, Debug)]
 pub struct DealDamage {
     pub target: Entity,
+    pub source: Entity,
     pub amount: f32,
+}
+
+pub fn on_collision_deal_damage(
+    event: On<CollisionStart>,
+    mut damage: MessageWriter<DealDamage>,
+    mut sources: Query<&mut DamageSource>,
+) {
+    let Ok(mut source) = sources.get_mut(event.collider1) else {
+        return;
+    };
+    if source.entity == event.collider2 || source.ignore.contains(&event.collider2) {
+        return;
+    }
+    source.ignore.insert(event.collider2);
+    damage.write(DealDamage {
+        target: event.collider2,
+        source: source.entity,
+        amount: source.damage,
+    });
 }
 
 fn apply_damage(
@@ -52,7 +92,7 @@ fn apply_damage(
             health.current -= damage.amount;
             if health.current <= 0. {
                 commands.entity(damage.target).despawn();
-                debug!("Entity {} was killed", damage.target);
+                debug!("Entity {} was killed by {}", damage.target, damage.source);
             }
         }
     }

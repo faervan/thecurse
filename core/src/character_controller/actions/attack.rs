@@ -1,4 +1,7 @@
-use crate::{character_controller::actions::aerial::AerialState, prelude::*};
+use crate::{
+    character_controller::actions::aerial::AerialState, creatures::weapon::BASIC_SWORD_DAMAGE,
+    prelude::*,
+};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -26,14 +29,17 @@ pub enum AttackState {
 pub enum AttackType {
     Normal,
     SwingBottom,
+    CastVoid,
 }
 
 fn update_attack_state(
     time: Res<Time>,
     input: Res<ButtonInput<KeyCode>>,
-    query: Query<(&mut AttackState, &AerialState), With<MainCharacter>>,
+    query: Query<(Entity, &mut AttackState, &AerialState), With<MainCharacter>>,
+    mut cast_spell: MessageWriter<SpawnSpellVoid>,
+    cursor_target: Res<CursorTargetPosition>,
 ) {
-    for (mut attack_state, aerial) in query {
+    for (entity, mut attack_state, aerial) in query {
         if *attack_state == AttackState::None {
             if *aerial == AerialState::Grounded {
                 if input.pressed(KeyCode::KeyQ) {
@@ -46,6 +52,15 @@ fn update_attack_state(
                         timer: Timer::new(Duration::from_millis(500), TimerMode::Once),
                         ty: AttackType::SwingBottom,
                     };
+                } else if input.pressed(KeyCode::KeyR) {
+                    *attack_state = AttackState::Attacking {
+                        timer: Timer::new(Duration::from_millis(200), TimerMode::Once),
+                        ty: AttackType::CastVoid,
+                    };
+                    cast_spell.write(SpawnSpellVoid {
+                        position: **cursor_target,
+                        caster: entity,
+                    });
                 }
             }
         } else if let AttackState::Attacking { timer, .. } = &mut *attack_state {
@@ -60,13 +75,18 @@ fn update_attack_state(
 fn attack_changes(
     mut commands: Commands,
     changed: Query<
-        (&AttackState, &GltfAnimationTarget, &WeaponColliderHandle),
+        (
+            Entity,
+            &AttackState,
+            &GltfAnimationTarget,
+            &WeaponColliderHandle,
+        ),
         Changed<AttackState>,
     >,
     mut players: Query<(&mut AnimationTransitions, &mut AnimationPlayer)>,
     character: Res<PlayerCharacterHandle>,
 ) {
-    for (attack, target, weapon_entity) in changed {
+    for (entity, attack, target, weapon_entity) in changed {
         let animation = match attack {
             AttackState::None => {
                 commands
@@ -75,12 +95,15 @@ fn attack_changes(
                 character.idle
             }
             AttackState::Attacking { timer, ty } if timer.elapsed().is_zero() => {
-                commands
-                    .entity(**weapon_entity)
-                    .insert((Collider::cuboid(0.5, 5., 0.3), Sensor));
+                commands.entity(**weapon_entity).insert((
+                    Collider::cuboid(0.5, 5., 0.3),
+                    Sensor,
+                    DamageSource::new(entity, BASIC_SWORD_DAMAGE),
+                ));
                 match ty {
                     AttackType::Normal => character.attack,
                     AttackType::SwingBottom => character.attack_bottom,
+                    AttackType::CastVoid => character.idle,
                 }
             }
             _ => continue,

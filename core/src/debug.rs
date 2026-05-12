@@ -114,6 +114,14 @@ impl DebugElement for PhysicsDebugPlugin {
                 ..Default::default()
             },
         );
+
+        app.add_systems(
+            Update,
+            (|mut gizmos: Gizmos, cursor_target: Res<CursorTargetPosition>| {
+                gizmos.sphere(**cursor_target, 0.2, Color::srgb(0.5, 0.5, 0.1));
+            })
+            .run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
+        );
     }
 
     on_enable!(|mut configs: ResMut<GizmoConfigStore>| {
