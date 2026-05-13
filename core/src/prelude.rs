@@ -5,6 +5,10 @@ pub use std::time::Duration;
 
 pub use thiserror::Error;
 
+pub use serde::{Deserialize, Serialize};
+
+pub use smol::channel::{Receiver, Sender};
+
 pub use avian3d::{math::*, prelude::*};
 pub use bevy::ecs::{entity::EntityHashSet, lifecycle::HookContext, world::DeferredWorld};
 pub use bevy::input::common_conditions::{input_just_pressed, input_just_released, input_pressed};

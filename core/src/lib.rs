@@ -8,6 +8,7 @@ pub mod creatures;
 pub mod debug;
 pub mod items;
 mod navmesh;
+pub mod networking;
 mod shader_utils;
 pub mod spells;
 pub mod terrain;
@@ -43,6 +44,7 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             shader_utils::plugin,
             animation::AnimationPlugin,
             navmesh::plugin(game_state),
+            networking::client_plugin(game_state),
             creatures::plugin(game_state),
             character_controller::plugin(game_state),
             spells::plugin(game_state),

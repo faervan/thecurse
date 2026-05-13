@@ -5,10 +5,18 @@ edition.workspace = true
 authors.workspace = true
 
 [features]
+default = ["dev"]
 dev = ["thecurse_core/dev"]
 
 [dependencies]
 thecurse_core.workspace = true
+bevy.workspace = true
+
+thiserror.workspace = true
+
+postcard.workspace = true
+smol.workspace = true
+futures.workspace = true
 
 [lints]
 workspace = true
