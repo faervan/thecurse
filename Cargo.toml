@@ -34,6 +34,7 @@ vleue_navigator = { version = "0.15", default-features = false, features = [
   "avian3d",
   "detailed-layers",
 ] }
+bevy_console = "0.17"
 
 # Dev dependencies
 egui = "0.33"
@@ -64,6 +65,7 @@ thiserror = "2"
 bitflags = "2.10"
 rand = "0.10"
 ambassador = "0.5"
+clap = { version = "4.5", features = ["derive"] }
 
 [workspace.lints.rust]
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.

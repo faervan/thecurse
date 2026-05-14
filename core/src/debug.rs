@@ -78,10 +78,10 @@ impl DebugElement for WorldInspectorPlugin {
     const KEY: KeyCode = KeyCode::F1;
 
     fn plugin(app: &mut App) {
-        app.add_plugins((
-            EguiPlugin::default(),
-            Self::default().run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
-        ));
+        if !app.is_plugin_added::<EguiPlugin>() {
+            app.add_plugins(EguiPlugin::default());
+        }
+        app.add_plugins(Self::default().run_if(in_state(DebugElementActive::<Self>::ACTIVE)));
     }
 }
 

@@ -14,7 +14,6 @@ pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
         app.add_systems(OnEnter(game_state), setup_connection);
         app.add_systems(OnEnter(game_state), spawn_text);
 
-        app.add_systems(Update, send_msg.run_if(in_state(game_state)));
         app.add_systems(Update, read_server_messages.run_if(in_state(game_state)));
     }
 }
@@ -51,18 +50,10 @@ fn read_server_messages(con: Res<ServerConnection>, query: Query<&mut Text, With
     }
 }
 
-fn send_msg(con: Res<ServerConnection>, input: Res<ButtonInput<KeyCode>>) {
-    if input.just_pressed(KeyCode::KeyM) {
-        con.sender
-            .send_blocking(TcpMsgToServer::Message("hello world".to_string()))
-            .unwrap();
-    }
-}
-
 #[derive(Resource)]
-struct ServerConnection {
-    sender: Sender<TcpMsgToServer>,
-    receiver: Receiver<TcpMsgToClient>,
+pub struct ServerConnection {
+    pub sender: Sender<TcpMsgToServer>,
+    pub receiver: Receiver<TcpMsgToClient>,
 }
 
 fn setup_connection(mut commands: Commands) {
