@@ -6,23 +6,15 @@ pub mod animation;
 pub mod assets;
 mod console;
 pub mod creatures;
-pub mod debug;
 pub mod items;
 mod navmesh;
 pub mod networking;
 mod shader_utils;
 pub mod spells;
 pub mod terrain;
-pub mod utils;
 
 mod shared;
 pub use shared::*;
-
-mod character_controller;
-pub use character_controller::*;
-
-mod camera_controller;
-pub use camera_controller::*;
 
 pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -40,15 +32,12 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
         // Custom plugins
         app.add_plugins((
             assets::plugin,
-            utils::follow::FollowUtilPlugin::new(game_state),
-            utils::billboard::plugin(game_state),
             shader_utils::plugin,
             animation::AnimationPlugin,
             navmesh::plugin(game_state),
             networking::client_plugin(game_state),
             console::plugin(game_state),
             creatures::plugin(game_state),
-            character_controller::plugin(game_state),
             spells::plugin(game_state),
             terrain::plugin(game_state),
         ));

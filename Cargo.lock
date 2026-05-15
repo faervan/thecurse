@@ -6399,8 +6399,10 @@ name = "thecurse_game"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy-inspector-egui",
  "rand 0.10.1",
  "thecurse_core",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

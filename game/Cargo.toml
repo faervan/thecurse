@@ -6,13 +6,15 @@ authors.workspace = true
 
 [features]
 default = ["dev"]
-dev = ["thecurse_core/dev"]
+dev = ["thecurse_core/dev", "dep:bevy-inspector-egui"]
 
 [dependencies]
 thecurse_core.workspace = true
 
 bevy.workspace = true
+bevy-inspector-egui = { workspace = true, optional = true }
 
+thiserror.workspace = true
 rand.workspace = true
 
 [lints]

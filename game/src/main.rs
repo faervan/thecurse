@@ -1,11 +1,17 @@
-use thecurse_core::{CameraControllerPlugin, asset_plugin, assets::all_assets_loaded};
+use thecurse_core::{asset_plugin, assets::all_assets_loaded};
 
 use crate::prelude::*;
 
+mod camera;
+mod debug;
+mod hud;
 mod menu;
+mod npcs;
 mod player;
 mod prelude;
 mod scenes;
+mod utils;
+mod weapon;
 
 fn main() {
     let mut app = App::new();
@@ -29,11 +35,15 @@ fn main() {
     // Custom plugins
     app.add_plugins((
         thecurse_core::default_plugins(AppState::Game),
-        thecurse_core::debug::plugin,
-        CameraControllerPlugin::new(AppState::Game),
+        debug::plugin,
+        camera::CameraControllerPlugin::new(AppState::Game),
         menu::plugin,
-        player::plugin,
+        utils::plugin,
+        hud::plugin,
         scenes::plugin,
+        weapon::plugin,
+        player::plugin,
+        npcs::plugin,
     ));
 
     // States

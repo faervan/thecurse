@@ -41,16 +41,13 @@ impl ItemEffect for ItemSpawnGoblin {
     }
 }
 
-fn spawn_goblin(
-    mut spawner: MessageWriter<SpawnGoblin>,
-    player: Query<&Transform, With<MainCharacter>>,
-) {
+fn spawn_goblin(mut commands: Commands, player: Query<&Transform, With<MainCharacter>>) {
     let Ok(transform) = player.single() else {
         warn!("Can't spawn goblin in front of player: MainCharacter not found");
         return;
     };
     let position = transform.translation + transform.rotation * Vec3::Z * 5.;
-    spawner.write(SpawnGoblin { position });
+    commands.spawn((Goblin, Transform::from_translation(position)));
 }
 
 #[derive(Reflect, Debug)]
@@ -72,15 +69,13 @@ impl ItemEffect for ItemSpawnGoblinsRandom {
     }
 }
 
-fn random_spawn_goblins(mut goblin_spawner: MessageWriter<SpawnGoblin>) {
+fn random_spawn_goblins(mut commands: Commands) {
     let mut rng = rand::rng();
     use rand::RngExt as _;
     for _ in 0..80 {
         let x = rng.random_range(-50_f32..50_f32);
         let z = rng.random_range(-50_f32..50_f32);
-        goblin_spawner.write(SpawnGoblin {
-            position: Vec3::new(x, 1., z),
-        });
+        commands.spawn((Goblin, Transform::from_translation(Vec3::new(x, 1., z))));
     }
 }
 
@@ -93,13 +88,9 @@ impl ItemEffect for ItemRespawnPlayer {
     }
 }
 
-fn respawn_player(
-    mut commands: Commands,
-    mut spawner: MessageWriter<SpawnPlayer>,
-    query: Query<Entity, With<MainCharacter>>,
-) {
+fn respawn_player(mut commands: Commands, query: Query<Entity, With<MainCharacter>>) {
     for entity in query {
         commands.entity(entity).despawn();
     }
-    spawner.write(SpawnPlayer { position: Vec3::Y });
+    commands.spawn((MainCharacter, Transform::from_translation(Vec3::Y)));
 }

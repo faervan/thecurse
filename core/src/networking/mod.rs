@@ -7,46 +7,14 @@ use crate::{
     prelude::*,
 };
 
+mod client_log;
 pub mod io_util;
 
 pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
+        app.add_plugins(client_log::plugin(game_state));
+
         app.add_systems(OnEnter(game_state), setup_connection);
-        app.add_systems(OnEnter(game_state), spawn_text);
-
-        app.add_systems(Update, read_server_messages.run_if(in_state(game_state)));
-    }
-}
-
-#[derive(Component)]
-struct TcpConLogText;
-
-fn spawn_text(mut commands: Commands) {
-    commands.spawn((
-        Node {
-            ..Default::default()
-        },
-        GameEntity,
-        children![(
-            TcpConLogText,
-            Text::default(),
-            TextFont::from_font_size(12.)
-        )],
-    ));
-}
-
-fn read_server_messages(con: Res<ServerConnection>, query: Query<&mut Text, With<TcpConLogText>>) {
-    for mut text in query {
-        loop {
-            match con.receiver.try_recv() {
-                Ok(msg) => text.push_str(&format!("{msg:?}\n")),
-                Err(smol::channel::TryRecvError::Empty) => break,
-                Err(smol::channel::TryRecvError::Closed) => {
-                    warn!("ServerConnection receiver closed");
-                    break;
-                }
-            }
-        }
     }
 }
 

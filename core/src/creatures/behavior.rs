@@ -161,9 +161,9 @@ pub struct CreatureMoveTowardsTarget {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub(crate) struct CreatureNavmeshPath {
-    pub(crate) path: Vec<Vec2>,
-    pub(crate) start: Vec2,
+pub struct CreatureNavmeshPath {
+    pub path: Vec<Vec2>,
+    pub start: Vec2,
     update_timer: Timer,
 }
 

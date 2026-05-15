@@ -20,10 +20,6 @@ pub use crate::GameEntity;
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::GameLayer;
-pub use crate::utils::billboard::Billboarded;
-pub use crate::utils::gltf_instance_hooks::{GltfAnimationTarget, on_ready_insert_child_pointer};
-pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
-pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
 pub use crate::navmesh::Obstacle;
 
@@ -31,14 +27,9 @@ pub use crate::items::{Item, ItemEffect as _};
 
 pub use crate::creatures::behavior::*;
 pub use crate::creatures::crowd_control::*;
-pub use crate::creatures::goblin::{Goblin, SpawnGoblin};
+pub use crate::creatures::goblin::Goblin;
 pub use crate::creatures::health::*;
-pub use crate::creatures::weapon::{WeaponColliderHandle, WeaponSocketHandle};
-pub use crate::creatures::{Creature, CreatureBundle};
-
-pub use crate::camera_controller::{CameraController, CameraControllerAnchor};
-pub use crate::character_controller::actions::InterruptAction;
-pub use crate::character_controller::cursor_target::CursorTargetPosition;
-pub use crate::character_controller::{MainCharacter, Player, PlayerCharacterHandle, SpawnPlayer};
+pub use crate::creatures::player::{MainCharacter, Player};
+pub use crate::creatures::{Creature, IsCreature};
 
 pub use crate::spells::SpawnSpellVoid;

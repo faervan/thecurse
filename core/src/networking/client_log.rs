@@ -1,0 +1,48 @@
+use crate::{networking::ServerConnection, prelude::*};
+
+pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
+    move |app: &mut App| {
+        app.add_systems(OnEnter(game_state), spawn_text);
+
+        app.add_systems(Update, read_server_messages.run_if(in_state(game_state)));
+    }
+}
+
+#[derive(Component)]
+struct TcpConLogText;
+
+fn spawn_text(mut commands: Commands) {
+    commands.spawn((
+        Node {
+            ..Default::default()
+        },
+        GameEntity,
+        children![(
+            TcpConLogText,
+            Text::default(),
+            TextFont::from_font_size(12.)
+        )],
+    ));
+}
+
+fn read_server_messages(
+    con: Res<ServerConnection>,
+    query: Query<&mut Text, With<TcpConLogText>>,
+    mut recv_closed_log: Local<bool>,
+) {
+    for mut text in query {
+        loop {
+            match con.receiver.try_recv() {
+                Ok(msg) => text.push_str(&format!("{msg:?}\n")),
+                Err(smol::channel::TryRecvError::Empty) => break,
+                Err(smol::channel::TryRecvError::Closed) => {
+                    if !*recv_closed_log {
+                        warn!("ServerConnection receiver closed");
+                        *recv_closed_log = true;
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
