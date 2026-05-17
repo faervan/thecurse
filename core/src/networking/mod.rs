@@ -8,11 +8,15 @@ use crate::{
 };
 
 mod client_log;
+mod handle_udp;
 pub mod io_util;
 
 pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
-        app.add_plugins(client_log::plugin(game_state));
+        app.add_plugins((
+            client_log::plugin(game_state),
+            handle_udp::plugin(game_state),
+        ));
 
         app.add_systems(OnEnter(game_state), setup_connection);
     }
