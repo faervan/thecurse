@@ -16,10 +16,10 @@ pub use bevy::platform::collections::{HashMap, HashSet};
 pub use bevy::prelude::*;
 pub use vleue_navigator::prelude::*;
 
-pub use crate::GameEntity;
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;
 pub use crate::shared::GameLayer;
+pub use crate::{GameEntity, GameStateEntity};
 
 pub use crate::navmesh::Obstacle;
 
@@ -31,5 +31,7 @@ pub use crate::creatures::goblin::Goblin;
 pub use crate::creatures::health::*;
 pub use crate::creatures::player::{MainCharacter, Player};
 pub use crate::creatures::{Creature, IsCreature};
+
+pub use crate::environment::*;
 
 pub use crate::spells::SpawnSpellVoid;

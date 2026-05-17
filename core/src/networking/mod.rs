@@ -35,11 +35,10 @@ fn setup_connection(mut commands: Commands) {
     });
 
     let pool = AsyncComputeTaskPool::get();
-    pool.spawn(handle_server_tcp(to_client_sx, to_server_rx))
-        .detach();
+    pool.spawn(handle_tcp(to_client_sx, to_server_rx)).detach();
 }
 
-async fn handle_server_tcp(
+async fn handle_tcp(
     sx: Sender<TcpMsgToClient>,
     rx: Receiver<TcpMsgToServer>,
 ) -> Result<(), TheCurseIoError> {
@@ -107,6 +106,7 @@ pub enum TcpMsgToClient {
     ConnectionAccepted {
         clients: HashSet<ClientId>,
         client_id: ClientId,
+        world: String,
     },
     ClientConnected(ClientId),
     ClientDisconnected(ClientId),

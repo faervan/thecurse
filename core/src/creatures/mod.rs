@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{GameStateEntity, prelude::*};
 
 pub mod behavior;
 pub mod crowd_control;
@@ -19,7 +19,6 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-#[require(GameEntity)]
 pub struct Creature;
 
 pub trait IsCreature: Component + Default {
@@ -37,7 +36,9 @@ pub trait IsCreature: Component + Default {
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
         let mut cmds = world.commands();
         let mut cmds = cmds.entity(hook.entity);
-        let cmds = cmds.try_insert_if_new((CreatureBundle::<Self>::default(), Self::bundle()));
+        let cmds = cmds
+            .try_insert_if_new((Self::bundle(), GameEntity, GameStateEntity))
+            .try_insert_if_new(CreatureBundle::<Self>::default());
         Self::on_add_hook(cmds);
     }
 }

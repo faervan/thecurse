@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 mod camera;
 mod debug;
+mod environment;
 mod hud;
 mod menu;
 mod npcs;
@@ -41,6 +42,7 @@ fn main() {
         utils::plugin,
         hud::plugin,
         scenes::plugin,
+        environment::plugin,
         weapon::plugin,
         player::plugin,
         npcs::plugin,

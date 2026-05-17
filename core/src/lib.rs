@@ -6,6 +6,7 @@ pub mod animation;
 pub mod assets;
 mod console;
 pub mod creatures;
+pub mod environment;
 pub mod items;
 mod navmesh;
 pub mod networking;
@@ -61,6 +62,11 @@ pub fn asset_plugin() -> AssetPlugin {
 #[reflect(Component)]
 /// Marks an entity as to be despawned when the app leaves the game state
 pub struct GameEntity;
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+/// Marks an entity as part of the game state
+pub struct GameStateEntity;
 
 fn despawn_game_entities(mut commands: Commands, query: Query<Entity, With<GameEntity>>) {
     for entity in query {

@@ -1,14 +1,9 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use bevy::{
-    app::{PanicHandlerPlugin, ScheduleRunnerPlugin, TerminalCtrlCHandlerPlugin},
-    diagnostic::{DiagnosticsPlugin, FrameCountPlugin},
-    gltf::GltfPlugin,
+    app::{PanicHandlerPlugin, TerminalCtrlCHandlerPlugin},
     log::LogPlugin,
-    scene::ScenePlugin,
-    state::app::StatesPlugin,
     tasks::AsyncComputeTaskPool,
-    time::TimePlugin,
 };
 use futures::{AsyncReadExt as _, FutureExt as _, select};
 use smol::{
@@ -23,44 +18,44 @@ use thecurse_core::{
     prelude::*,
 };
 
+mod prelude;
+mod scene;
+
 fn main() -> AppExit {
     let mut app = App::new();
 
     app.add_plugins((
+        MinimalPlugins,
         PanicHandlerPlugin,
         LogPlugin::default(),
-        TaskPoolPlugin::default(),
-        FrameCountPlugin,
-        TimePlugin,
         TransformPlugin,
-        DiagnosticsPlugin,
-        ScheduleRunnerPlugin::default(),
         TerminalCtrlCHandlerPlugin,
-        AssetPlugin::default(),
-        ScenePlugin,
-        GltfPlugin::default(),
-        StatesPlugin,
     ));
 
-    app.add_systems(Startup, setup);
+    app.add_systems(
+        Startup,
+        (scene::setup, scene::serialize_scene.pipe(start_server)).chain(),
+    );
 
     app.run()
 }
 
-fn setup() {
+fn start_server(world: In<String>) {
     let pool = AsyncComputeTaskPool::get();
-    pool.spawn(handle_send_to_server()).detach();
+    pool.spawn(handle_send_to_server(world.0)).detach();
 }
 
 struct ClientStore {
+    world: String,
     next_id: usize,
     clients: HashMap<ClientId, Sender<TcpMsgToClient>>,
     broadcast: Vec<Sender<TcpMsgToClient>>,
 }
 
 impl ClientStore {
-    fn new() -> Self {
+    fn new(world: String) -> Self {
         Self {
+            world,
             next_id: 0,
             clients: HashMap::new(),
             broadcast: vec![],
@@ -77,6 +72,7 @@ impl ClientStore {
         sx.send(TcpMsgToClient::ConnectionAccepted {
             clients: self.clients.keys().copied().collect(),
             client_id: id,
+            world: self.world.clone(),
         })
         .await?;
         self.broadcast(&TcpMsgToClient::ClientConnected(id)).await?;
@@ -104,9 +100,9 @@ impl ClientStore {
     }
 }
 
-async fn handle_send_to_server() -> Result<(), TcpHandlerError> {
+async fn handle_send_to_server(world: String) -> Result<(), TcpHandlerError> {
     let listener = TcpListener::bind("127.0.0.1:7189").await?;
-    let store = Arc::new(RwLock::new(ClientStore::new()));
+    let store = Arc::new(RwLock::new(ClientStore::new(world)));
 
     loop {
         match listener.accept().await {
