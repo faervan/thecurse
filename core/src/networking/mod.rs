@@ -10,6 +10,7 @@ use crate::{
 mod client_log;
 mod handle_udp;
 pub mod io_util;
+pub mod udp;
 
 pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {

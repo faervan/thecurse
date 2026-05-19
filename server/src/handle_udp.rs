@@ -30,6 +30,11 @@ impl Default for ReadBuffer {
 
 fn read_udp(udp: Res<Udp>, mut buf: Local<ReadBuffer>) {
     while let Ok((len, addr)) = udp.recv_from(&mut **buf) {
+        if rand::random_ratio(2, 100) {
+            // Drop packet, fake unreliability
+            debug!("Packet of len {len} bytes was fake-dropped");
+            continue;
+        }
         debug!("Received {len} bytes from {addr:?} via UDP");
     }
 }

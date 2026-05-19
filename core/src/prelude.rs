@@ -3,6 +3,7 @@ pub use std::marker::PhantomData;
 pub use std::ops::{Deref, DerefMut};
 pub use std::time::Duration;
 
+pub use rand;
 pub use thiserror::Error;
 
 pub use serde::{Deserialize, Serialize};

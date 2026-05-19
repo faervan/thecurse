@@ -1,0 +1,255 @@
+use std::fmt::Debug;
+
+use crate::prelude::*;
+
+#[derive(Debug)]
+/// A ring buffer with a capacity of `32` items.
+pub struct RingBuffer<T: Debug, const NUM_ITEMS: usize = 32> {
+    newest: u16,
+    items: [Option<T>; NUM_ITEMS],
+}
+
+impl<T: Debug, const NUM_ITEMS: usize> Default for RingBuffer<T, NUM_ITEMS> {
+    fn default() -> Self {
+        assert!(NUM_ITEMS < u16::MAX as usize);
+        Self {
+            newest: u16::MAX,
+            items: std::array::from_fn(|_| None),
+        }
+    }
+}
+
+impl<T: Debug, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
+    pub fn new() -> Self {
+        assert_eq!(u16::MAX % NUM_ITEMS as u16, 31);
+        Self::default()
+    }
+
+    pub fn get(&self, index: u16) -> Option<&T> {
+        let i = self.newest.wrapping_sub(index) as usize;
+        if i < NUM_ITEMS {
+            self.items[index as usize % NUM_ITEMS].as_ref()
+        } else {
+            None
+        }
+    }
+
+    pub fn push(&mut self, item: T) -> u16 {
+        self.newest = self.newest.wrapping_add(1);
+        let i = self.newest;
+        self.items[i as usize % NUM_ITEMS] = Some(item);
+        i
+    }
+
+    pub fn insert(&mut self, item: T, index: u16) {
+        let next_i = self.newest.wrapping_add(1);
+        for i in wrapping_range(next_i, index) {
+            self.items[i as usize % NUM_ITEMS].take();
+        }
+        self.newest = index;
+        self.items[index as usize % NUM_ITEMS] = Some(item);
+    }
+
+    pub fn take(&mut self, index: u16) -> Option<T> {
+        let i = self.newest.wrapping_sub(index) as usize;
+        if i < NUM_ITEMS {
+            self.items[index as usize % NUM_ITEMS].take()
+        } else {
+            None
+        }
+    }
+
+    /// Iterate over all existing items in chronological order (oldest first).
+    pub fn iter<'a>(&'a self) -> Iter<'a, T, NUM_ITEMS> {
+        Iter {
+            i: self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
+            ring: self,
+        }
+    }
+
+    /// Iterate over the indices of all existing items in chronological order (oldest first).
+    /// The indices returned will increase, but wrap around at `u16::MAX`.
+    pub fn keys<'a>(&'a self) -> IterKeys<'a, T, NUM_ITEMS> {
+        IterKeys {
+            i: self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
+            ring: self,
+        }
+    }
+
+    #[inline]
+    pub fn insert_will_override(&self) -> bool {
+        let i = self.newest.wrapping_add(1);
+        self.items[i as usize % NUM_ITEMS].is_some()
+    }
+
+    #[inline(always)]
+    pub fn get_newest_index(&self) -> u16 {
+        self.newest
+    }
+}
+
+pub struct Iter<'a, T: Debug, const NUM_ITEMS: usize> {
+    i: u16,
+    ring: &'a RingBuffer<T, NUM_ITEMS>,
+}
+
+impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for Iter<'a, T, NUM_ITEMS> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in wrapping_range(self.i, self.ring.newest.wrapping_add(1)) {
+            self.i = self.i.wrapping_add(1);
+            if let Some(item) = self.ring.get(i) {
+                return Some(item);
+            }
+        }
+        None
+    }
+}
+
+pub struct IterKeys<'a, T: Debug, const NUM_ITEMS: usize> {
+    i: u16,
+    ring: &'a RingBuffer<T, NUM_ITEMS>,
+}
+
+impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for IterKeys<'a, T, NUM_ITEMS> {
+    type Item = u16;
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in wrapping_range(self.i, self.ring.newest.wrapping_add(1)) {
+            self.i = self.i.wrapping_add(1);
+            if self.ring.get(i).is_some() {
+                return Some(i);
+            }
+        }
+        None
+    }
+}
+
+fn wrapping_range(start: u16, end: u16) -> impl Iterator<Item = u16> {
+    let len = end.wrapping_sub(start);
+    (0..len).map(move |i| start.wrapping_add(i))
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_ring_buffer() {
+        let mut i = 0;
+        let mut ring = super::RingBuffer::<usize>::new();
+        while i < 35 {
+            let index = ring.push(i);
+            assert_eq!(i, index as usize);
+            assert_eq!(Some(&i), ring.get(index));
+            if i > 30 {
+                println!("i: {i}, i - 31: {}", i - 31);
+                assert_eq!(Some(&(i - 31)), ring.get(i as u16 - 31));
+            }
+            i += 1;
+        }
+        // assert!(false);
+    }
+
+    #[test]
+    fn unlimited_push() {
+        let mut i = 0;
+        let mut wrap = true;
+        let mut ring = super::RingBuffer::<u16>::new();
+        loop {
+            let index = ring.push(i);
+            // indices increment sequentially
+            assert_eq!(i, index);
+            // Values can be accessed by their index
+            assert_eq!(Some(&i), ring.get(index));
+            {
+                let oldest = i.wrapping_sub(31);
+                let expected = (i > 30 || !wrap).then_some(&oldest);
+                // We can access other values in the buffer if they exist
+                assert_eq!(expected, ring.get(oldest));
+            }
+            // Iterate from i = 0 to i = u16::MAX exactly twice
+            if i == u16::MAX {
+                if wrap {
+                    i = 0;
+                    wrap = false;
+                } else {
+                    break;
+                }
+            } else {
+                i += 1;
+            }
+        }
+    }
+
+    #[test]
+    fn insert() {
+        let mut ring = super::RingBuffer::<()>::new();
+        ring.insert((), 1);
+        assert!(ring.get(0).is_none());
+        assert!(ring.get(1).is_some());
+        assert!(ring.get(2).is_none());
+        assert_eq!(ring.push(()), 2);
+        assert_eq!(ring.push(()), 3);
+        ring.insert((), 34);
+        for i in 0..64 {
+            if i == 34 || i == 3 {
+                assert!(ring.get(i).is_some());
+            } else {
+                assert!(ring.get(i).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn iterate() {
+        let mut ring = super::RingBuffer::<u16>::new();
+        ring.push(0);
+        ring.push(1);
+        let mut iter = ring.iter();
+        assert_eq!(iter.next(), Some(&0));
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn iterate_many() {
+        let mut ring = super::RingBuffer::<u16>::new();
+        let range = 0..33;
+        for i in range {
+            ring.push(i);
+        }
+        // 33 elements were inserted, so all 32 slots in the buffer should be filled.
+        // The oldest element (0) was replaced by the last element (32), so the first element now is
+        // 1.
+        let mut i = 1;
+        for item in ring.iter() {
+            assert_eq!(*item, i);
+            i += 1;
+        }
+    }
+
+    #[test]
+    fn iterate_keys() {
+        let mut ring = super::RingBuffer::<()>::new();
+        ring.push(());
+        ring.push(());
+        let mut iter = ring.keys();
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), None);
+        ring.insert((), u16::MAX);
+        ring.push(());
+        let mut iter = ring.keys();
+        assert_eq!(iter.next(), Some(u16::MAX));
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn insert_will_override() {
+        let mut ring = super::RingBuffer::<()>::new();
+        for _ in 0..32 {
+            assert!(!ring.insert_will_override());
+            ring.push(());
+        }
+        assert!(ring.insert_will_override());
+    }
+}
