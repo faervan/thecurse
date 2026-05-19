@@ -1,15 +1,13 @@
 use std::fmt::Debug;
 
-use crate::prelude::*;
-
 #[derive(Debug)]
 /// A ring buffer with a capacity of `32` items.
-pub struct RingBuffer<T: Debug, const NUM_ITEMS: usize = 32> {
+pub struct RingBuffer<T, const NUM_ITEMS: usize = 32> {
     newest: u16,
     items: [Option<T>; NUM_ITEMS],
 }
 
-impl<T: Debug, const NUM_ITEMS: usize> Default for RingBuffer<T, NUM_ITEMS> {
+impl<T, const NUM_ITEMS: usize> Default for RingBuffer<T, NUM_ITEMS> {
     fn default() -> Self {
         assert!(NUM_ITEMS < u16::MAX as usize);
         Self {
@@ -19,7 +17,7 @@ impl<T: Debug, const NUM_ITEMS: usize> Default for RingBuffer<T, NUM_ITEMS> {
     }
 }
 
-impl<T: Debug, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
+impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     pub fn new() -> Self {
         assert_eq!(u16::MAX % NUM_ITEMS as u16, 31);
         Self::default()
@@ -88,7 +86,7 @@ impl<T: Debug, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     }
 }
 
-pub struct Iter<'a, T: Debug, const NUM_ITEMS: usize> {
+pub struct Iter<'a, T, const NUM_ITEMS: usize> {
     i: u16,
     ring: &'a RingBuffer<T, NUM_ITEMS>,
 }
@@ -106,7 +104,7 @@ impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for Iter<'a, T, NUM_ITEMS> {
     }
 }
 
-pub struct IterKeys<'a, T: Debug, const NUM_ITEMS: usize> {
+pub struct IterKeys<'a, T, const NUM_ITEMS: usize> {
     i: u16,
     ring: &'a RingBuffer<T, NUM_ITEMS>,
 }
