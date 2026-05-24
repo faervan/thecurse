@@ -1,3 +1,6 @@
+// Needed for [`networking::udp::bytes::StaticByteRepr`]
+#![feature(generic_const_exprs)]
+
 pub mod prelude;
 use bevy::window::{CursorOptions, PrimaryWindow};
 use prelude::*;

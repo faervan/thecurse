@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 /// A ring buffer with a capacity of `32` items.
@@ -32,6 +32,15 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
         }
     }
 
+    pub fn get_mut(&mut self, index: u16) -> Option<&mut T> {
+        let i = self.newest.wrapping_sub(index) as usize;
+        if i < NUM_ITEMS {
+            self.items[index as usize % NUM_ITEMS].as_mut()
+        } else {
+            None
+        }
+    }
+
     pub fn push(&mut self, item: T) -> u16 {
         self.newest = self.newest.wrapping_add(1);
         let i = self.newest;
@@ -58,10 +67,19 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     }
 
     /// Iterate over all existing items in chronological order (oldest first).
-    pub fn iter<'a>(&'a self) -> Iter<'a, T, NUM_ITEMS> {
+    pub fn iter(&self) -> Iter<'_, T, NUM_ITEMS> {
         Iter {
             i: self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
             ring: self,
+        }
+    }
+
+    /// Iterate over all existing items in chronological order (oldest first).
+    pub fn iter_mut(&mut self) -> IterMut<'_, T, NUM_ITEMS> {
+        IterMut {
+            i: self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
+            ring: self,
+            _marker: PhantomData,
         }
     }
 
@@ -84,6 +102,11 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     pub fn get_newest_index(&self) -> u16 {
         self.newest
     }
+
+    #[inline(always)]
+    pub fn get_next_index(&self) -> u16 {
+        self.newest.wrapping_add(1)
+    }
 }
 
 pub struct Iter<'a, T, const NUM_ITEMS: usize> {
@@ -91,7 +114,7 @@ pub struct Iter<'a, T, const NUM_ITEMS: usize> {
     ring: &'a RingBuffer<T, NUM_ITEMS>,
 }
 
-impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for Iter<'a, T, NUM_ITEMS> {
+impl<'a, T, const NUM_ITEMS: usize> Iterator for Iter<'a, T, NUM_ITEMS> {
     type Item = &'a T;
     fn next(&mut self) -> Option<Self::Item> {
         for i in wrapping_range(self.i, self.ring.newest.wrapping_add(1)) {
@@ -104,12 +127,35 @@ impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for Iter<'a, T, NUM_ITEMS> {
     }
 }
 
+pub struct IterMut<'a, T, const NUM_ITEMS: usize> {
+    i: u16,
+    ring: *mut RingBuffer<T, NUM_ITEMS>,
+    _marker: PhantomData<&'a mut RingBuffer<T, NUM_ITEMS>>,
+}
+
+impl<'a, T, const NUM_ITEMS: usize> Iterator for IterMut<'a, T, NUM_ITEMS> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        unsafe {
+            let ring = &mut *self.ring;
+            for i in wrapping_range(self.i, ring.newest.wrapping_add(1)) {
+                self.i = self.i.wrapping_add(1);
+                if let Some(item) = ring.get_mut(i) {
+                    let item_ptr = item as *mut T;
+                    return Some(&mut *item_ptr);
+                }
+            }
+        }
+        None
+    }
+}
+
 pub struct IterKeys<'a, T, const NUM_ITEMS: usize> {
     i: u16,
     ring: &'a RingBuffer<T, NUM_ITEMS>,
 }
 
-impl<'a, T: Debug, const NUM_ITEMS: usize> Iterator for IterKeys<'a, T, NUM_ITEMS> {
+impl<'a, T, const NUM_ITEMS: usize> Iterator for IterKeys<'a, T, NUM_ITEMS> {
     type Item = u16;
     fn next(&mut self) -> Option<Self::Item> {
         for i in wrapping_range(self.i, self.ring.newest.wrapping_add(1)) {

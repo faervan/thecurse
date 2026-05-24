@@ -1,25 +1,29 @@
-use crate::networking::udp::{
-    bytes::{ByteRepr, StaticByteRepr},
-    packet_sender::UdpCommunicator,
-};
+use crate::networking::udp::bytes::{ByteRepr, StaticByteRepr};
+use crate::prelude::*;
 
-struct PacketAck {
-    newest_send: u16,
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(super) struct PacketAck {
+    /// The id of the [`super::Packet`] with which this [`PacketAck`] is send
+    pub(super) sequence_id: u16,
+    /// The id of the most recent received packet.
     newest_received: u16,
+    /// Bitflags indicating which of the previous 31 packets were received
     ack_bits: u32,
 }
 
-impl StaticByteRepr<8> for PacketAck {
-    fn as_bytes(&self) -> [u8; 8] {
+impl StaticByteRepr for PacketAck {
+    const LEN: usize = 8;
+    fn as_bytes(&self) -> [u8; Self::LEN] {
         let mut bytes = [0; 8];
-        bytes[..2].copy_from_slice(&self.newest_send.to_le_bytes());
+        bytes[..2].copy_from_slice(&self.sequence_id.to_le_bytes());
         bytes[2..4].copy_from_slice(&self.newest_received.to_le_bytes());
         bytes[4..].copy_from_slice(&self.ack_bits.to_le_bytes());
         bytes
     }
-    fn from_bytes(bytes: &[u8; 8]) -> Self {
+    fn from_bytes(bytes: &[u8; Self::LEN]) -> Self {
         Self {
-            newest_send: u16::from_le_bytes(bytes[0..2].try_into().unwrap()),
+            sequence_id: u16::from_le_bytes(bytes[0..2].try_into().unwrap()),
             newest_received: u16::from_le_bytes(bytes[2..4].try_into().unwrap()),
             ack_bits: u32::from_le_bytes(bytes[4..].try_into().unwrap()),
         }
@@ -27,7 +31,7 @@ impl StaticByteRepr<8> for PacketAck {
 }
 
 impl<M: ByteRepr> UdpCommunicator<M> {
-    fn acknowledge(&mut self, ack: PacketAck) {
+    pub(super) fn acknowledge(&mut self, ack: PacketAck) {
         for i in 0..32 {
             if ack.ack_bits & 1 << i != 0 {
                 let index = ack.newest_received.wrapping_sub(i);
@@ -36,14 +40,14 @@ impl<M: ByteRepr> UdpCommunicator<M> {
         }
     }
 
-    fn create_ack(&self) -> PacketAck {
+    pub(super) fn create_ack(&self, sequence_id: u16) -> PacketAck {
         let mut ack_bits = 0;
         let newest_received = self.received_packets.get_newest_index();
         for i in self.received_packets.keys() {
             ack_bits |= 1 << newest_received.wrapping_sub(i) as u32;
         }
         PacketAck {
-            newest_send: self.send_packets.get_newest_index(),
+            sequence_id,
             newest_received,
             ack_bits,
         }
@@ -53,10 +57,11 @@ impl<M: ByteRepr> UdpCommunicator<M> {
 #[cfg(test)]
 mod test {
     use crate::networking::udp::Message;
+    use crate::prelude::*;
 
     #[test]
     fn acknowledge() {
-        let mut com = super::UdpCommunicator::<Message>::new();
+        let mut com = UdpCommunicator::<Message>::default();
         // Those two are overridden immediately
         com.received_packets.push(());
         com.received_packets.insert((), 3);
@@ -64,7 +69,7 @@ mod test {
         com.received_packets.insert((), u16::MAX - 30);
         com.received_packets.insert((), u16::MAX);
         com.received_packets.push(());
-        let ack = com.create_ack();
+        let ack = com.create_ack(0);
         assert_eq!(com.received_packets.iter().count(), 3);
         com.acknowledge(ack);
         assert_eq!(com.received_packets.iter().count(), 0);

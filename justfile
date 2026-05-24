@@ -9,3 +9,6 @@ serve:
 
 ci-check:
 	cargo +nightly fmt -- --config error_on_line_overflow=true --check && cargo clippy
+
+test:
+	cargo test

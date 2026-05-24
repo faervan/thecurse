@@ -37,6 +37,7 @@ clap.workspace = true
 serde.workspace = true
 ron.workspace = true
 postcard.workspace = true
+crc.workspace = true
 smol.workspace = true
 futures.workspace = true
 

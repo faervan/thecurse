@@ -1,54 +1,65 @@
 use crate::networking::udp::packet_sender::InnerUdpMessage;
 use crate::prelude::*;
 
-pub trait StaticByteRepr<const LEN: usize> {
-    fn as_bytes(&self) -> [u8; LEN];
-    fn from_bytes(bytes: &[u8; LEN]) -> Self;
+pub trait StaticByteRepr {
+    const LEN: usize;
+    fn as_bytes(&self) -> [u8; Self::LEN];
+    fn from_bytes(bytes: &[u8; Self::LEN]) -> Self;
 }
 
 pub trait ByteRepr: Sized {
     const MIN_LEN: usize;
     const MAX_LEN: usize;
-    fn len(&self) -> usize;
+    fn byte_len(&self) -> usize;
     /// *Panics* if `bytes.len() < self.len()`
     fn write_as_bytes(&self, bytes: &mut [u8]);
     fn from_bytes(bytes: &[u8]) -> Result<Self, ByteReprError>;
 
     /// Writes all items of `v` into `bytes`.
-    /// Returns the number of items of `v` that fit into and have been written to `bytes`.
-    fn write_many(v: &[Self], bytes: &mut [u8]) -> usize {
+    /// Returns the number of items of `v` that fit into and have been written to `bytes`, as well
+    /// as the length of all those items combined in bytes.
+    /// `(num_items_written, num_bytes_written)`
+    fn write_many<'a, I>(values: I, bytes: &mut [u8]) -> (usize, usize)
+    where
+        I: IntoIterator<Item = &'a Self>,
+        Self: 'a,
+    {
         let mut ptr = 0;
-        for (i, v) in v.iter().enumerate() {
-            if bytes.len() - ptr < v.len() {
-                return i;
+        let mut i = 0;
+        for v in values {
+            if bytes.len() - ptr < v.byte_len() {
+                return (i, ptr);
             }
             v.write_as_bytes(&mut bytes[ptr..]);
-            ptr += v.len();
+            ptr += v.byte_len();
+            i += 1;
         }
-        v.len()
+        (i, ptr)
     }
-    fn read_many(bytes: &[u8]) -> Vec<Self> {
+    /// Returns `(Vec<Self>, bytes_read)`
+    fn read_many(bytes: &[u8]) -> (Vec<Self>, usize) {
         let mut ptr = 0;
         let mut out = vec![];
-        loop {
+        while bytes.len() > ptr {
             match Self::from_bytes(&bytes[ptr..]) {
                 Ok(v) => {
-                    ptr += v.len();
+                    ptr += v.byte_len();
                     out.push(v);
                 }
                 Err(e) => {
-                    warn!("{e}");
-                    return out;
+                    warn!("Failed to read packet: {e}");
+                    return (out, ptr);
                 }
             }
         }
+        (out, ptr)
     }
 }
 
 impl ByteRepr for InnerUdpMessage {
     const MIN_LEN: usize = 1;
     const MAX_LEN: usize = 3;
-    fn len(&self) -> usize {
+    fn byte_len(&self) -> usize {
         match self {
             Self::Hello => 1,
             Self::Wave(n) if n >> 8 == 0 => 2,
@@ -91,6 +102,14 @@ impl ByteRepr for InnerUdpMessage {
 pub enum ByteReprError {
     #[error("Invalid value")]
     InvalidValue,
+    #[error("Invalid crc")]
+    CrcMismatch,
+}
+
+impl From<std::array::TryFromSliceError> for ByteReprError {
+    fn from(_value: std::array::TryFromSliceError) -> Self {
+        Self::InvalidValue
+    }
 }
 
 #[cfg(test)]
@@ -109,10 +128,17 @@ mod test {
 
         println!("bytes: {bytes:?}");
         let messages = InnerUdpMessage::read_many(&bytes);
-        assert_eq!(messages, v);
+        let v_byte_len = v.iter().map(|v| v.byte_len()).sum();
+        assert_eq!(messages, (v.clone(), v_byte_len));
 
-        let mut bytes = vec![0; hello.len() + w5.len()];
-        assert_eq!(InnerUdpMessage::write_many(&v, &mut bytes), 2);
-        assert_eq!(InnerUdpMessage::read_many(&bytes), vec![hello, w5]);
+        let mut bytes = vec![0; hello.byte_len() + w5.byte_len()];
+        assert_eq!(
+            InnerUdpMessage::write_many(&v, &mut bytes),
+            (2, bytes.len())
+        );
+        assert_eq!(
+            InnerUdpMessage::read_many(&bytes),
+            (vec![hello, w5], hello.byte_len() + w5.byte_len())
+        );
     }
 }

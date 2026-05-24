@@ -1,4 +1,4 @@
-use bevy::{reflect::TypeRegistry, scene::serde::SceneDeserializer};
+use bevy::scene::serde::SceneDeserializer;
 use serde::de::DeserializeSeed;
 
 use crate::{
