@@ -107,6 +107,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
             match Packet::<M>::from_bytes(&self.data_buffer[..n]) {
                 Ok(packet) => {
                     debug!("received packet: {packet:#?}");
+                    self.received_packets.insert((), packet.ack.sequence_id);
                     self.acknowledge(packet.ack);
                     self.msg_recv_queue
                         .extend(packet.messages.into_iter().map(|m| m.inner));
@@ -121,7 +122,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
     where
         M: Debug,
     {
-        while !self.send_packets.insert_will_override() && !self.msg_send_queue.is_empty() {
+        while !self.send_packets.push_will_override() && !self.msg_send_queue.is_empty() {
             let mut available_bytes = MAX_PACKET_DATA_LEN;
             let mut included_msgs = 0;
             for msg in self.msg_send_queue.iter() {
@@ -163,6 +164,31 @@ impl<M: ByteRepr> UdpCommunicator<M> {
             }
         }
     }
+
+    #[inline(always)]
+    pub fn no_pending_packets(&self) -> bool {
+        self.send_packets.is_empty()
+    }
+}
+
+#[cfg(test)]
+fn test_init<M>(port_offset: u16) -> (UdpCommunicator<M>, UdpCommunicator<M>)
+where
+    M: ByteRepr,
+{
+    let _ = bevy::log::tracing_subscriber::FmtSubscriber::builder()
+        .with_test_writer()
+        .with_max_level(bevy::log::Level::DEBUG)
+        .try_init();
+    let localhost = std::net::Ipv4Addr::new(127, 0, 0, 1);
+    let localhost = std::net::IpAddr::V4(localhost);
+    let addr1 = std::net::SocketAddr::new(localhost, port_offset);
+    let addr2 = std::net::SocketAddr::new(localhost, port_offset + 1);
+    let com1 = UdpCommunicator::<M>::bind(addr1);
+    let com2 = UdpCommunicator::<M>::bind(addr2);
+    assert!(com2.connect(addr1).is_ok());
+    assert!(com1.connect(addr2).is_ok());
+    (com1, com2)
 }
 
 #[cfg(test)]
@@ -172,15 +198,7 @@ mod test {
 
     #[test]
     fn packet_roundtrip() {
-        bevy::log::tracing_subscriber::FmtSubscriber::builder()
-            .with_test_writer()
-            .with_max_level(bevy::log::Level::DEBUG)
-            .init();
-        let addr1 = "127.0.0.1:7200";
-        let mut com1 = UdpCommunicator::<InnerUdpMessage>::bind(addr1);
-        let addr2 = "127.0.0.1:7201";
-        let mut com2 = UdpCommunicator::<InnerUdpMessage>::bind(addr2);
-        assert!(com2.connect(addr1).is_ok());
+        let (mut com1, mut com2) = super::test_init::<InnerUdpMessage>(7200);
         let m1 = InnerUdpMessage::Hello;
         let m2 = InnerUdpMessage::Wave(1394);
         com2.write(m1);
@@ -190,5 +208,28 @@ mod test {
         assert_eq!(com1.read(), Some(m1));
         assert_eq!(com1.read(), Some(m2));
         assert_eq!(com1.read(), None);
+    }
+
+    #[test]
+    fn send_until_ack() {
+        let (mut com1, mut com2) = super::test_init::<InnerUdpMessage>(7202);
+        let m1 = InnerUdpMessage::Hello;
+        com2.write(m1);
+        com2.tick();
+
+        let mut i = 0;
+        while !com2.no_pending_packets() {
+            i += 1;
+            com1.tick();
+            if let Some(message) = com1.read() {
+                assert_eq!(message, m1);
+                debug!("com1 received: {message:?}");
+                // Send a dummy packet back to acknowledge the received one
+                com1.write(InnerUdpMessage::Wave(1));
+            }
+            com2.tick();
+            std::thread::sleep(Duration::from_secs_f32(1. / 60.));
+        }
+        assert_eq!(i, 2);
     }
 }

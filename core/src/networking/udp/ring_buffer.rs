@@ -93,7 +93,7 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     }
 
     #[inline]
-    pub fn insert_will_override(&self) -> bool {
+    pub fn push_will_override(&self) -> bool {
         let i = self.newest.wrapping_add(1);
         self.items[i as usize % NUM_ITEMS].is_some()
     }
@@ -106,6 +106,16 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     #[inline(always)]
     pub fn get_next_index(&self) -> u16 {
         self.newest.wrapping_add(1)
+    }
+
+    #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.iter().count()
+    }
+
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -189,7 +199,6 @@ mod test {
             }
             i += 1;
         }
-        // assert!(false);
     }
 
     #[test]
@@ -291,9 +300,27 @@ mod test {
     fn insert_will_override() {
         let mut ring = super::RingBuffer::<()>::new();
         for _ in 0..32 {
-            assert!(!ring.insert_will_override());
+            assert!(!ring.push_will_override());
             ring.push(());
         }
-        assert!(ring.insert_will_override());
+        assert!(ring.push_will_override());
+    }
+
+    #[test]
+    fn len() {
+        let mut ring = super::RingBuffer::<()>::new();
+        assert!(ring.is_empty());
+        for i in 0..32 {
+            assert_eq!(ring.len(), i);
+            ring.push(());
+        }
+        assert_eq!(ring.len(), 32);
+        ring.push(());
+        assert_eq!(ring.len(), 32);
+        // Doesn't do anything, the first element was overriden by the last push
+        ring.take(0);
+        assert_eq!(ring.len(), 32);
+        ring.take(1);
+        assert_eq!(ring.len(), 31);
     }
 }
