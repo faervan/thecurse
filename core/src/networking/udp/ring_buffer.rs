@@ -60,7 +60,6 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
             // The index is either older than the previous oldest posibble entry or it is at least
             // [`NUM_ITEMS`] greater than the previous newest entry
             // *Nuke the whole buffer*
-            println!("Nuke cuz index={index}, newest={}", self.newest);
             for item in &mut self.items {
                 item.take();
             }
@@ -75,12 +74,10 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
         {
             // The index is in range of the previous buffer
             // *Only insert the new value, nothing more*
-            println!("Just override cuz index={index}, newest={}", self.newest);
             self.items[index as usize % NUM_ITEMS] = Some(item);
         } else {
             // The index is greater than the previous newest item, but not by too much.
             // *Purge all values between the previous oldest and `index - NUM_ITEMS`*
-            println!("Advance cuz index={index}, newest={}", self.newest);
             for i in wrapping_range(
                 self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
                 index.wrapping_sub(NUM_ITEMS as u16 - 1),

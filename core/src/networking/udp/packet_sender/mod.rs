@@ -143,6 +143,15 @@ impl<M: ByteRepr> UdpCommunicator<M> {
         M: Debug,
     {
         while let Ok(n) = self.socket.recv(&mut self.data_buffer) {
+            #[cfg(test)]
+            // Fake UDP unreliability
+            if self.fake_unreliable && rand::random_bool(0.2) {
+                let corrupt_num = rand::random_range(0..n * 8);
+                debug!("Corrupting {corrupt_num} bits");
+                for i in 0..corrupt_num {
+                    self.data_buffer[i / 8] ^= 1 << i % 8;
+                }
+            }
             match Packet::<M>::from_bytes(&self.data_buffer[..n]) {
                 Ok(packet) => {
                     #[cfg(test)]
@@ -150,10 +159,14 @@ impl<M: ByteRepr> UdpCommunicator<M> {
                     if self.fake_unreliable && rand::random_bool(0.5) {
                         continue;
                     }
-                    // Heartbeat
-                    if packet.messages.is_empty() {
-                        #[cfg(test)]
-                        debug!("Received heartbeat packet #{}", packet.ack.sequence_id);
+                    if !packet.reliable {
+                        if packet.messages.is_empty() {
+                            // Heartbeat
+                            #[cfg(test)]
+                            debug!("Received heartbeat packet #{}", packet.ack.sequence_id);
+                        } else {
+                            self.msg_recv_queue.extend(packet.messages);
+                        }
                         self.acknowledge(packet.ack);
                         continue;
                     }
