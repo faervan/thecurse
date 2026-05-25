@@ -35,7 +35,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
         for i in 0..32 {
             if ack.ack_bits & 1 << i != 0 {
                 let index = ack.newest_received.wrapping_sub(i);
-                self.send_packets.take(index);
+                self.reliable_send_packets.take(index);
             }
         }
     }
@@ -64,10 +64,10 @@ mod test {
         let mut com = UdpCommunicator::<Message>::default();
         // Those two are overridden immediately
         com.received_packets.push(());
-        com.received_packets.insert((), 3);
+        com.received_packets.insert(3, ());
         //
-        com.received_packets.insert((), u16::MAX - 30);
-        com.received_packets.insert((), u16::MAX);
+        com.received_packets.insert(u16::MAX - 30, ());
+        com.received_packets.insert(u16::MAX, ());
         com.received_packets.push(());
         let ack = com.create_ack(0);
         assert_eq!(com.received_packets.iter().count(), 3);

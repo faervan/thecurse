@@ -9,19 +9,15 @@ use crate::networking::udp::{packet_sender::packet::MAX_PACKET_DATA_LEN, ring_bu
 use crate::{
     networking::udp::{
         bytes::ByteRepr,
-        packet_sender::{
-            message::UdpMessage,
-            packet::{MAX_PACKET_LEN, Packet},
-        },
+        packet_sender::packet::{MAX_PACKET_LEN, Packet},
     },
     prelude::*,
 };
 
-mod message;
 mod packet;
 mod packet_ack;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone, Copy)]
 pub enum InnerUdpMessage {
     Hello,
     Wave(u16),
@@ -29,11 +25,20 @@ pub enum InnerUdpMessage {
 
 pub struct UdpCommunicator<M: ByteRepr> {
     socket: UdpSocket,
-    send_packets: RingBuffer<(Instant, Packet<M>)>,
+    reliable_send_packets: RingBuffer<(Instant, Packet<M>)>,
+    unreliable_send_packet_id: u16,
+    unreliable_send_packets: VecDeque<Packet<M>>,
     received_packets: RingBuffer<()>,
-    msg_send_queue: VecDeque<UdpMessage<M>>,
+    msg_send_queue: VecDeque<M>,
     msg_recv_queue: VecDeque<M>,
     data_buffer: [u8; MAX_PACKET_LEN],
+    /// If this is `true`, a packet has been received more than once, potentially meaning that we
+    /// have to send an ack to the other side.
+    received_packet_duplicate: bool,
+    #[cfg(test)]
+    fake_unreliable: bool,
+    #[cfg(test)]
+    debug_logs: bool,
 }
 
 impl<M: ByteRepr> Default for UdpCommunicator<M> {
@@ -44,11 +49,18 @@ impl<M: ByteRepr> Default for UdpCommunicator<M> {
             .expect("Failed to set udp socket to nonblocking mode");
         Self {
             socket,
-            send_packets: RingBuffer::new(),
+            reliable_send_packets: RingBuffer::new(),
+            unreliable_send_packet_id: 0,
+            unreliable_send_packets: VecDeque::new(),
             received_packets: RingBuffer::new(),
             msg_send_queue: VecDeque::new(),
             msg_recv_queue: VecDeque::new(),
             data_buffer: [0; MAX_PACKET_LEN],
+            received_packet_duplicate: false,
+            #[cfg(test)]
+            fake_unreliable: false,
+            #[cfg(test)]
+            debug_logs: false,
         }
     }
 }
@@ -61,12 +73,31 @@ impl<M: ByteRepr> UdpCommunicator<M> {
             .expect("Failed to set udp socket to nonblocking mode");
         Self {
             socket,
-            send_packets: RingBuffer::new(),
+            reliable_send_packets: RingBuffer::new(),
+            unreliable_send_packet_id: 0,
+            unreliable_send_packets: VecDeque::new(),
             received_packets: RingBuffer::new(),
             msg_send_queue: VecDeque::new(),
             msg_recv_queue: VecDeque::new(),
             data_buffer: [0; MAX_PACKET_LEN],
+            received_packet_duplicate: false,
+            #[cfg(test)]
+            fake_unreliable: false,
+            #[cfg(test)]
+            debug_logs: false,
         }
+    }
+
+    #[cfg(test)]
+    fn with_fake_unreliablity(mut self) -> Self {
+        self.fake_unreliable = true;
+        self
+    }
+
+    #[cfg(test)]
+    fn with_debug_logs(mut self) -> Self {
+        self.debug_logs = true;
+        self
     }
 
     #[inline]
@@ -76,10 +107,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
 
     #[inline(always)]
     pub fn write(&mut self, message: M) {
-        self.msg_send_queue.push_back(UdpMessage {
-            reliable: true,
-            inner: message,
-        });
+        self.msg_send_queue.push_back(message);
     }
 
     #[inline(always)]
@@ -94,6 +122,17 @@ impl<M: ByteRepr> UdpCommunicator<M> {
         M: Debug,
     {
         self.receive();
+        if self.received_packet_duplicate && self.msg_send_queue.is_empty() {
+            self.received_packet_duplicate = false;
+            let sequence_id = self.unreliable_send_packet_id;
+            self.unreliable_send_packet_id = self.unreliable_send_packet_id.wrapping_add(1);
+            let packet = Packet::heartbeat(self.create_ack(sequence_id));
+            #[cfg(test)]
+            if self.debug_logs {
+                debug!("Constructed new hearbeat packet #{sequence_id}");
+            }
+            self.unreliable_send_packets.push_back(packet);
+        }
         self.flush_messages();
         self.send_packets();
     }
@@ -106,11 +145,38 @@ impl<M: ByteRepr> UdpCommunicator<M> {
         while let Ok(n) = self.socket.recv(&mut self.data_buffer) {
             match Packet::<M>::from_bytes(&self.data_buffer[..n]) {
                 Ok(packet) => {
-                    debug!("received packet: {packet:#?}");
-                    self.received_packets.insert((), packet.ack.sequence_id);
+                    #[cfg(test)]
+                    // Fake UDP unreliability
+                    if self.fake_unreliable && rand::random_bool(0.5) {
+                        continue;
+                    }
+                    // Heartbeat
+                    if packet.messages.is_empty() {
+                        #[cfg(test)]
+                        debug!("Received heartbeat packet #{}", packet.ack.sequence_id);
+                        self.acknowledge(packet.ack);
+                        continue;
+                    }
+
+                    if self.received_packets.get(packet.ack.sequence_id).is_some() {
+                        self.received_packet_duplicate = true;
+                        #[cfg(test)]
+                        debug!("Received duplicate packet #{}", packet.ack.sequence_id);
+                        continue;
+                    }
+                    if super::ring_buffer::wrapping_gt(
+                        self.received_packets.get_newest_index().wrapping_sub(31),
+                        packet.ack.sequence_id,
+                        64,
+                    ) {
+                        self.received_packet_duplicate = true;
+                        #[cfg(test)]
+                        debug!("Received too old packet #{}", packet.ack.sequence_id);
+                        continue;
+                    }
+                    self.received_packets.insert(packet.ack.sequence_id, ());
+                    self.msg_recv_queue.extend(packet.messages);
                     self.acknowledge(packet.ack);
-                    self.msg_recv_queue
-                        .extend(packet.messages.into_iter().map(|m| m.inner));
                 }
                 Err(e) => warn!("Received invalid packet: {e}"),
             }
@@ -122,7 +188,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
     where
         M: Debug,
     {
-        while !self.send_packets.push_will_override() && !self.msg_send_queue.is_empty() {
+        while !self.reliable_send_packets.push_will_override() && !self.msg_send_queue.is_empty() {
             let mut available_bytes = MAX_PACKET_DATA_LEN;
             let mut included_msgs = 0;
             for msg in self.msg_send_queue.iter() {
@@ -130,7 +196,7 @@ impl<M: ByteRepr> UdpCommunicator<M> {
                     available_bytes -= msg.byte_len();
                     included_msgs += 1;
                 } else {
-                    // TODO! maybe include other messages here that are small enough, but that
+                    // TODO! Maybe include other messages here that are small enough, but that
                     // would make message ordering arbitrary
                     break;
                 }
@@ -143,19 +209,30 @@ impl<M: ByteRepr> UdpCommunicator<M> {
                     MAX_PACKET_DATA_LEN
                 );
             }
-            let sequence_id = self.send_packets.get_next_index();
+            let sequence_id = self.reliable_send_packets.get_next_index();
             let packet = Packet {
                 ack: self.create_ack(sequence_id),
+                reliable: true,
+                ordered: true,
                 messages: self.msg_send_queue.drain(..included_msgs).collect(),
             };
-            self.send_packets
+            #[cfg(test)]
+            if self.debug_logs {
+                debug!("Constructed new packet #{sequence_id} with {included_msgs} messages");
+            }
+            self.reliable_send_packets
                 .push((Instant::now() - Duration::from_secs(1), packet));
         }
     }
 
     fn send_packets(&mut self) {
-        for (last_send, packet) in self.send_packets.iter_mut() {
-            if last_send.elapsed() > Duration::from_millis(100) {
+        for (last_send, packet) in self.reliable_send_packets.iter_mut() {
+            let send_cooldown = if cfg!(test) {
+                Duration::from_millis(3)
+            } else {
+                Duration::from_millis(100)
+            };
+            if last_send.elapsed() > send_cooldown {
                 *last_send = Instant::now();
                 packet.write_as_bytes(&mut self.data_buffer);
                 if let Err(e) = self.socket.send(&self.data_buffer[..packet.byte_len()]) {
@@ -163,11 +240,17 @@ impl<M: ByteRepr> UdpCommunicator<M> {
                 }
             }
         }
+        for packet in self.unreliable_send_packets.drain(..) {
+            packet.write_as_bytes(&mut self.data_buffer);
+            if let Err(e) = self.socket.send(&self.data_buffer[..packet.byte_len()]) {
+                error!("Failed to send packet: {e}");
+            }
+        }
     }
 
     #[inline(always)]
-    pub fn no_pending_packets(&self) -> bool {
-        self.send_packets.is_empty()
+    pub fn has_work(&self) -> bool {
+        !self.reliable_send_packets.is_empty()
     }
 }
 
@@ -218,7 +301,7 @@ mod test {
         com2.tick();
 
         let mut i = 0;
-        while !com2.no_pending_packets() {
+        while com2.has_work() {
             i += 1;
             com1.tick();
             if let Some(message) = com1.read() {
@@ -228,8 +311,36 @@ mod test {
                 com1.write(InnerUdpMessage::Wave(1));
             }
             com2.tick();
-            std::thread::sleep(Duration::from_secs_f32(1. / 60.));
+            std::thread::sleep(Duration::from_millis(1));
         }
         assert_eq!(i, 2);
+    }
+
+    #[test]
+    fn test_reliability() {
+        let (mut com1, mut com2) = super::test_init::<InnerUdpMessage>(7204);
+        com1 = com1.with_fake_unreliablity().with_debug_logs();
+        com2 = com2.with_fake_unreliablity();
+        let mut send = HashSet::new();
+        assert!(send.insert(InnerUdpMessage::Hello));
+        for i in 0..20000 {
+            assert!(send.insert(InnerUdpMessage::Wave(i)));
+        }
+        for m in &send {
+            com1.write(*m);
+        }
+        com1.tick();
+
+        let mut received = HashSet::new();
+        while com1.has_work() {
+            com2.tick();
+            while let Some(message) = com2.read() {
+                assert!(received.insert(message));
+            }
+            com1.tick();
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        assert_eq!(received, send);
     }
 }

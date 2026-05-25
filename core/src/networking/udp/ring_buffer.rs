@@ -19,7 +19,7 @@ impl<T, const NUM_ITEMS: usize> Default for RingBuffer<T, NUM_ITEMS> {
 
 impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
     pub fn new() -> Self {
-        assert_eq!(u16::MAX % NUM_ITEMS as u16, 31);
+        assert_eq!(u16::MAX % NUM_ITEMS as u16, NUM_ITEMS as u16 - 1);
         Self::default()
     }
 
@@ -48,13 +48,48 @@ impl<T, const NUM_ITEMS: usize> RingBuffer<T, NUM_ITEMS> {
         i
     }
 
-    pub fn insert(&mut self, item: T, index: u16) {
-        let next_i = self.newest.wrapping_add(1);
-        for i in wrapping_range(next_i, index) {
-            self.items[i as usize % NUM_ITEMS].take();
+    pub fn insert(&mut self, index: u16, item: T) {
+        let prev_oldest = self.newest.wrapping_sub(NUM_ITEMS as u16 - 1);
+        if wrapping_gt(prev_oldest, index, NUM_ITEMS as u16 * 2)
+            || wrapping_gt(
+                index,
+                self.newest.wrapping_add(NUM_ITEMS as u16 - 1),
+                NUM_ITEMS as u16 * 2,
+            )
+        {
+            // The index is either older than the previous oldest posibble entry or it is at least
+            // [`NUM_ITEMS`] greater than the previous newest entry
+            // *Nuke the whole buffer*
+            println!("Nuke cuz index={index}, newest={}", self.newest);
+            for item in &mut self.items {
+                item.take();
+            }
+            self.newest = index;
+            self.items[index as usize % NUM_ITEMS] = Some(item);
+        } else if wrapping_gt(self.newest.wrapping_add(1), index, NUM_ITEMS as u16)
+            && wrapping_gt(
+                index,
+                self.newest.wrapping_sub(NUM_ITEMS as u16),
+                NUM_ITEMS as u16,
+            )
+        {
+            // The index is in range of the previous buffer
+            // *Only insert the new value, nothing more*
+            println!("Just override cuz index={index}, newest={}", self.newest);
+            self.items[index as usize % NUM_ITEMS] = Some(item);
+        } else {
+            // The index is greater than the previous newest item, but not by too much.
+            // *Purge all values between the previous oldest and `index - NUM_ITEMS`*
+            println!("Advance cuz index={index}, newest={}", self.newest);
+            for i in wrapping_range(
+                self.newest.wrapping_sub(NUM_ITEMS as u16 - 1),
+                index.wrapping_sub(NUM_ITEMS as u16 - 1),
+            ) {
+                self.take(i);
+            }
+            self.newest = index;
+            self.items[index as usize % NUM_ITEMS] = Some(item);
         }
-        self.newest = index;
-        self.items[index as usize % NUM_ITEMS] = Some(item);
     }
 
     pub fn take(&mut self, index: u16) -> Option<T> {
@@ -183,8 +218,19 @@ fn wrapping_range(start: u16, end: u16) -> impl Iterator<Item = u16> {
     (0..len).map(move |i| start.wrapping_add(i))
 }
 
+pub fn wrapping_gt(x: u16, y: u16, max_dif: u16) -> bool {
+    if u16::MAX - x < max_dif && y <= x && u16::MAX - x + y < max_dif {
+        return false;
+    } else if u16::MAX - y < max_dif && x <= y && u16::MAX - y + x < max_dif {
+        return true;
+    }
+    x > y
+}
+
 #[cfg(test)]
 mod test {
+    use crate::networking::udp::ring_buffer::{RingBuffer, wrapping_range};
+
     #[test]
     fn test_ring_buffer() {
         let mut i = 0;
@@ -235,19 +281,99 @@ mod test {
     #[test]
     fn insert() {
         let mut ring = super::RingBuffer::<()>::new();
-        ring.insert((), 1);
+        ring.insert(1, ());
         assert!(ring.get(0).is_none());
         assert!(ring.get(1).is_some());
         assert!(ring.get(2).is_none());
         assert_eq!(ring.push(()), 2);
         assert_eq!(ring.push(()), 3);
-        ring.insert((), 34);
+        ring.insert(34, ());
         for i in 0..64 {
             if i == 34 || i == 3 {
                 assert!(ring.get(i).is_some());
             } else {
                 assert!(ring.get(i).is_none());
             }
+        }
+        for i in u16::MAX - 50..=u16::MAX {
+            ring.insert(i, ());
+        }
+        for i in u16::MAX - 50..=u16::MAX {
+            if (u16::MAX - 31..=u16::MAX).contains(&i) {
+                assert!(ring.get(i).is_some());
+            } else {
+                assert!(ring.get(i).is_none());
+            }
+        }
+        assert!(ring.get(0).is_none());
+        assert!(ring.get(1).is_none());
+    }
+
+    #[test]
+    fn insert2() {
+        let mut ring = super::RingBuffer::<(), 4>::new();
+        check_item_range(&ring, (0, 8), Option::is_none);
+        ring.insert(2, ());
+        check_item_range(&ring, (0, 2), Option::is_none);
+        check_items(&ring, [(2, true)]);
+        check_item_range(&ring, (3, 8), Option::is_none);
+        //
+        ring.insert(4, ());
+        check_item_range(&ring, (0, 2), Option::is_none);
+        check_items(&ring, [(2, true), (3, false), (4, true)]);
+        check_item_range(&ring, (5, 8), Option::is_none);
+        //
+        ring.insert(1, ());
+        check_items(
+            &ring,
+            [(0, false), (1, true), (2, true), (3, false), (4, true)],
+        );
+        check_item_range(&ring, (5, 8), Option::is_none);
+        //
+        ring.insert(0, ());
+        check_items(&ring, [(0, true)]);
+        check_item_range(&ring, (1, 8), Option::is_none);
+        //
+        ring.insert(5, ());
+        check_item_range(&ring, (0, 5), Option::is_none);
+        check_items(&ring, [(5, true)]);
+        check_item_range(&ring, (6, 8), Option::is_none);
+        //
+        ring.insert(7, ());
+        check_item_range(&ring, (0, 5), Option::is_none);
+        check_items(&ring, [(5, true), (6, false), (7, true), (8, false)]);
+        //
+        ring.insert(3, ());
+        check_item_range(&ring, (0, 3), Option::is_none);
+        check_items(&ring, [(3, true)]);
+        check_item_range(&ring, (4, 8), Option::is_none);
+        //
+        ring.insert(0, ());
+        check_items(&ring, [(0, true), (1, false), (2, false), (3, true)]);
+        check_item_range(&ring, (4, 8), Option::is_none);
+    }
+
+    fn check_items<const N: usize>(
+        ring: &RingBuffer<(), N>,
+        indices: impl IntoIterator<Item = (u16, bool)>,
+    ) {
+        for (i, is_some) in indices {
+            if ring.get(i).is_some() != is_some {
+                dbg!(i);
+                dbg!(ring.get(i).is_some());
+                dbg!(is_some);
+            }
+            assert_eq!(ring.get(i).is_some(), is_some);
+        }
+    }
+
+    fn check_item_range<const N: usize>(
+        ring: &RingBuffer<(), N>,
+        bounds: (u16, u16),
+        check: impl Fn(&Option<()>) -> bool,
+    ) {
+        for i in wrapping_range(bounds.0, bounds.1) {
+            assert!(check(&ring.get(i).map(|_| ())));
         }
     }
 
@@ -288,11 +414,13 @@ mod test {
         assert_eq!(iter.next(), Some(0));
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), None);
-        ring.insert((), u16::MAX);
+        ring.insert(u16::MAX, ());
         ring.push(());
         let mut iter = ring.keys();
         assert_eq!(iter.next(), Some(u16::MAX));
         assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(2));
         assert_eq!(iter.next(), None);
     }
 
@@ -322,5 +450,17 @@ mod test {
         assert_eq!(ring.len(), 32);
         ring.take(1);
         assert_eq!(ring.len(), 31);
+    }
+
+    #[test]
+    fn wrapping_gt() {
+        assert!(super::wrapping_gt(10, 2, 32));
+        assert!(!super::wrapping_gt(10102, 12042, 32));
+        assert!(super::wrapping_gt(12042, 10102, 32));
+        assert!(!super::wrapping_gt(u16::MAX, 2, 32));
+        assert!(super::wrapping_gt(30, u16::MAX, 32));
+        assert!(super::wrapping_gt(31, u16::MAX, 32));
+        assert!(!super::wrapping_gt(32, u16::MAX, 32));
+        assert!(!super::wrapping_gt(65535_u16.wrapping_sub(31), 0, 32));
     }
 }

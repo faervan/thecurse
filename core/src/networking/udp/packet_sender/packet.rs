@@ -1,12 +1,13 @@
 use crate::networking::udp::{
     bytes::{ByteRepr, ByteReprError, StaticByteRepr as _},
-    packet_sender::{UdpMessage, packet_ack::PacketAck},
+    packet_sender::packet_ack::PacketAck,
 };
 
 /// The maximum allowed length of the data part of a UDP packet.
 /// The total maximum length is computed by adding the header length as well.
 pub(super) const MAX_PACKET_DATA_LEN: usize = 1024;
-pub(super) const PACKET_HEADER_LEN: usize = 4 + PacketAck::LEN;
+/// 4 bytes for the CRC, then the [`PacketAck`], then 1 byte extra metadata (reliable, ordered)
+pub(super) const PACKET_HEADER_LEN: usize = 4 + PacketAck::LEN + 1;
 /// The maximum allowed length of a UDP packet.
 pub(super) const MAX_PACKET_LEN: usize = PACKET_HEADER_LEN + MAX_PACKET_DATA_LEN;
 
@@ -28,7 +29,34 @@ const CRC: crc::Crc<u32> = crc::Crc::<u32>::new(&CRC_ALGORITHM);
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Packet<M: ByteRepr> {
     pub(super) ack: PacketAck,
-    pub(super) messages: Vec<UdpMessage<M>>,
+    /// TODO!
+    pub(super) reliable: bool,
+    /// TODO!
+    pub(super) ordered: bool,
+    /// If `messages.is_empty()`, then this was send as a heartbeat packet
+    pub(super) messages: Vec<M>,
+}
+
+impl<M: ByteRepr> Packet<M> {
+    #[inline(always)]
+    pub fn new(ack: PacketAck, messages: impl IntoIterator<Item = M>) -> Self {
+        Self {
+            ack,
+            reliable: true,
+            ordered: false,
+            messages: messages.into_iter().collect(),
+        }
+    }
+
+    #[inline(always)]
+    pub fn heartbeat(ack: PacketAck) -> Self {
+        Self {
+            ack,
+            reliable: false,
+            ordered: false,
+            messages: vec![],
+        }
+    }
 }
 
 impl<M: ByteRepr> ByteRepr for Packet<M> {
@@ -43,23 +71,34 @@ impl<M: ByteRepr> ByteRepr for Packet<M> {
     }
     fn write_as_bytes(&self, bytes: &mut [u8]) {
         bytes[4..4 + PacketAck::LEN].copy_from_slice(&self.ack.as_bytes());
+        let reliable = (self.reliable as u8) << 0;
+        let ordered = (self.ordered as u8) << 1;
+        bytes[4 + PacketAck::LEN] = reliable | ordered;
         let (_items_written, bytes_written) =
-            UdpMessage::<M>::write_many(&self.messages, &mut bytes[PACKET_HEADER_LEN..]);
+            M::write_many(&self.messages, &mut bytes[PACKET_HEADER_LEN..]);
         let crc = CRC
             .checksum(&bytes[4..PACKET_HEADER_LEN + bytes_written])
             .to_le_bytes();
         bytes[..4].copy_from_slice(&crc);
     }
     fn from_bytes(bytes: &[u8]) -> bevy::ecs::error::Result<Self, ByteReprError> {
-        let (messages, body_len) = UdpMessage::<M>::read_many(&bytes[PACKET_HEADER_LEN..]);
+        let (messages, body_len) = M::read_many(&bytes[PACKET_HEADER_LEN..]);
 
         let crc = u32::from_le_bytes(bytes[..4].try_into()?);
         if CRC.checksum(&bytes[4..PACKET_HEADER_LEN + body_len]) != crc {
             return Err(ByteReprError::CrcMismatch);
         }
 
+        let meta_byte = bytes
+            .get(4 + PacketAck::LEN)
+            .ok_or(ByteReprError::InvalidValue)?;
+        let reliable = meta_byte & 1 << 0 != 0;
+        let ordered = meta_byte & 1 << 1 != 0;
+
         Ok(Self {
             ack: PacketAck::from_bytes(bytes[4..4 + PacketAck::LEN].try_into()?),
+            reliable,
+            ordered,
             messages,
         })
     }
@@ -69,24 +108,21 @@ impl<M: ByteRepr> ByteRepr for Packet<M> {
 mod test {
     use crate::networking::udp::{
         bytes::ByteRepr,
-        packet_sender::{InnerUdpMessage, UdpMessage, packet::Packet},
+        packet_sender::{InnerUdpMessage, packet::Packet},
     };
     use crate::prelude::*;
 
     #[test]
     fn packet_byte_repr() {
         let com = UdpCommunicator::<InnerUdpMessage>::default();
-        let packet = Packet {
-            ack: com.create_ack(0),
-            messages: [
+        let packet = Packet::new(
+            com.create_ack(0),
+            [
                 InnerUdpMessage::Wave(12),
                 InnerUdpMessage::Wave(9284),
                 InnerUdpMessage::Hello,
-            ]
-            .into_iter()
-            .map(UdpMessage::new)
-            .collect(),
-        };
+            ],
+        );
         let mut buf = [0; Packet::<InnerUdpMessage>::MAX_LEN];
         packet.write_as_bytes(&mut buf);
         assert_eq!(Packet::<InnerUdpMessage>::from_bytes(&buf).unwrap(), packet);
