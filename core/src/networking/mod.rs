@@ -9,6 +9,7 @@ use crate::{
 
 mod client_log;
 mod handle_udp;
+pub use handle_udp::UdpMessage;
 pub mod io_util;
 
 pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {

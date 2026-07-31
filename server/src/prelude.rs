@@ -1,5 +1,5 @@
 pub use thecurse_core::networking::{
-    ClientId, TcpMsgToClient, TcpMsgToServer, io_util::TheCurseReadWriteExt as _,
+    ClientId, TcpMsgToClient, TcpMsgToServer, UdpMessage, io_util::TheCurseReadWriteExt as _,
 };
 pub use thecurse_core::prelude::*;
 
