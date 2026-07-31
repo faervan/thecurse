@@ -5,6 +5,7 @@ use bevy::{
 };
 
 mod client_store;
+mod commands;
 mod handle_tcp;
 mod handle_udp;
 mod prelude;
@@ -21,7 +22,7 @@ fn main() -> AppExit {
         TerminalCtrlCHandlerPlugin,
     ));
 
-    app.add_plugins((handle_tcp::plugin, handle_udp::plugin));
+    app.add_plugins((handle_tcp::plugin, handle_udp::plugin, commands::plugin));
 
     app.insert_resource(Time::<Fixed>::from_hz(10.));
 

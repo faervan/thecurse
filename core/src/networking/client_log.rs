@@ -53,6 +53,7 @@ fn read_server_messages(
                                 info!("success!");
                                 let scene = scenes.add(scene);
                                 commands.spawn(DynamicSceneRoot(scene));
+                                commands.spawn(MainCharacter);
                             }
                             Err(e) => error!("Scene deserialization failed: {e}"),
                         }

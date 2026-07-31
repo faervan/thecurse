@@ -1,17 +1,21 @@
-use smol::channel::SendError;
+use std::sync::Arc;
 
-use crate::prelude::*;
+use smol::{channel::SendError, lock::RwLock};
+
+use crate::{commands::TcpCommand, prelude::*};
 
 pub struct ClientStore {
-    world: String,
+    command_sx: Sender<TcpCommand>,
+    world: Arc<RwLock<String>>,
     next_id: usize,
     clients: HashMap<ClientId, Sender<TcpMsgToClient>>,
     broadcast: Vec<Sender<TcpMsgToClient>>,
 }
 
 impl ClientStore {
-    pub fn new(world: String) -> Self {
+    pub fn new(command_sx: Sender<TcpCommand>, world: Arc<RwLock<String>>) -> Self {
         Self {
+            command_sx,
             world,
             next_id: 0,
             clients: HashMap::new(),
@@ -29,13 +33,18 @@ impl ClientStore {
         sx.send(TcpMsgToClient::ConnectionAccepted {
             clients: self.clients.keys().copied().collect(),
             client_id: id,
-            world: self.world.clone(),
+            world: self.world.read_arc().await.clone(),
         })
         .await?;
         self.broadcast(&TcpMsgToClient::ClientConnected(id)).await?;
 
         self.clients.insert(id, sx.clone());
         self.broadcast.push(sx);
+
+        self.command_sx
+            .send(TcpCommand::SpawnPlayer { client_id: id })
+            .await
+            .unwrap();
 
         Ok((id, rx))
     }

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::prelude::*;
 
 pub fn setup(mut commands: Commands) {
@@ -6,7 +8,23 @@ pub fn setup(mut commands: Commands) {
     commands.spawn((RockObj, Transform::from_xyz(10., 2.5, 10.)));
 }
 
+#[derive(Resource, Default, Clone)]
+pub struct SerializedScene {
+    pub notify: Arc<event_listener::Event>,
+    pub world: Arc<smol::lock::RwLock<String>>,
+}
+
+pub fn scene_requested(scene: Res<SerializedScene>) -> bool {
+    scene.notify.total_listeners() > 0
+}
+
+pub fn publish_scene(scene: In<String>, scene_res: Res<SerializedScene>) {
+    *scene_res.world.write_arc_blocking() = scene.0;
+    scene_res.notify.notify(usize::MAX);
+}
+
 pub fn serialize_scene(world: &World, query: Query<Entity, With<GameStateEntity>>) -> String {
+    debug!("running serialize_scene");
     let scene = DynamicSceneBuilder::from_world(world)
         //
         // Allowed resources
@@ -24,6 +42,7 @@ pub fn serialize_scene(world: &World, query: Query<Entity, With<GameStateEntity>
         .allow_component::<RockObj>()
         // Misc
         .allow_component::<Transform>()
+        .allow_component::<Name>()
         .allow_component::<Health>()
         //
         // Extraction

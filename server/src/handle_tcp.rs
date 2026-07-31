@@ -3,35 +3,55 @@ use std::sync::Arc;
 use bevy::tasks::AsyncComputeTaskPool;
 use futures::{FutureExt as _, select};
 use smol::{
+    channel::unbounded,
     io::{AsyncReadExt as _, AsyncWriteExt as _},
     lock::RwLock,
     net::{TcpListener, TcpStream},
     pin,
 };
 
-use crate::{prelude::*, scene};
+use crate::{
+    commands::{TcpCommand, TcpCommandQueue},
+    prelude::*,
+    scene::{self, SerializedScene},
+};
 
 pub(super) fn plugin(app: &mut App) {
+    app.init_resource::<SerializedScene>();
+    app.add_systems(Startup, (scene::setup, start_server));
     app.add_systems(
-        Startup,
-        (scene::setup, scene::serialize_scene.pipe(start_server)).chain(),
+        FixedUpdate,
+        scene::serialize_scene
+            .pipe(scene::publish_scene)
+            .run_if(scene::scene_requested),
     );
 }
 
-fn start_server(world: In<String>) {
+fn start_server(scene: Res<SerializedScene>, mut commands: Commands) {
     let pool = AsyncComputeTaskPool::get();
-    pool.spawn(handle_send_to_server(world.0)).detach();
+    let (sx, rx) = unbounded();
+    commands.insert_resource(TcpCommandQueue { receiver: rx });
+    pool.spawn(handle_send_to_server(
+        sx,
+        scene.notify.clone(),
+        scene.world.clone(),
+    ))
+    .detach();
 }
 
-async fn handle_send_to_server(world: String) -> Result<(), TcpHandlerError> {
+async fn handle_send_to_server(
+    command_sx: Sender<TcpCommand>,
+    notify: Arc<event_listener::Event>,
+    world: Arc<RwLock<String>>,
+) -> Result<(), TcpHandlerError> {
     let listener = TcpListener::bind("127.0.0.1:7189").await?;
-    let store = Arc::new(RwLock::new(ClientStore::new(world)));
+    let store = Arc::new(RwLock::new(ClientStore::new(command_sx, world)));
 
     loop {
         match listener.accept().await {
             Ok((stream, addr)) => {
                 let pool = AsyncComputeTaskPool::get();
-                pool.spawn(handle_client(stream, addr, store.clone()))
+                pool.spawn(handle_client(stream, addr, notify.listen(), store.clone()))
                     .detach();
             }
             Err(e) => error!("couldn't get client: {e:?}"),
@@ -42,11 +62,13 @@ async fn handle_send_to_server(world: String) -> Result<(), TcpHandlerError> {
 async fn handle_client(
     mut stream: TcpStream,
     addr: SocketAddr,
+    notify: event_listener::EventListener,
     client_store: Arc<RwLock<ClientStore>>,
 ) {
     info!("new client: {:?}", addr);
     let mut len_buf = [0_u8; 4];
     let mut buf = vec![];
+    notify.await;
     let (client_id, events_rx) = client_store.write().await.add_client().await.unwrap();
     loop {
         let read_future = stream.read_exact(&mut len_buf).fuse();

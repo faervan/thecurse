@@ -10,13 +10,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.load_assets_with(asset_loading::load_player_assets);
 
-    app.add_systems(OnEnter(AppState::Game), spawn_player);
-
     app.add_observer(on_player_spawn);
-}
-
-fn spawn_player(mut commands: Commands) {
-    commands.spawn(MainCharacter);
 }
 
 #[derive(Resource, TypePath)]
