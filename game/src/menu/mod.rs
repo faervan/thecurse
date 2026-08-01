@@ -8,6 +8,20 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins(interaction::plugin);
 
     app.add_systems(OnEnter(AppState::Menu), build_main_menu);
+    app.add_systems(
+        Update,
+        (|mut next_state: ResMut<NextState<AppState>>| next_state.set(AppState::Game)).run_if(
+            in_state(AppState::Menu)
+                .and(input_just_pressed(KeyCode::KeyG).or(input_just_pressed(KeyCode::KeyP))),
+        ),
+    );
+    app.add_systems(
+        Update,
+        (|mut exit: MessageWriter<AppExit>| {
+            exit.write(AppExit::Success);
+        })
+        .run_if(in_state(AppState::Menu).and(input_just_pressed(KeyCode::KeyQ))),
+    );
 }
 
 fn build_main_menu(mut commands: Commands) {
