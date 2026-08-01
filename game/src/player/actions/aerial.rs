@@ -1,3 +1,5 @@
+use thecurse_core::creatures::player::AerialState;
+
 use crate::{
     player::{PlayerCharacterHandle, actions::InterruptAction},
     prelude::*,
@@ -12,15 +14,6 @@ pub(super) fn plugin(app: &mut App) {
         )
             .run_if(in_state(AppState::Game)),
     );
-}
-
-#[derive(Component, Reflect, Debug, Default, PartialEq)]
-#[reflect(Component)]
-pub enum AerialState {
-    #[default]
-    Grounded,
-    Jumping,
-    Falling,
 }
 
 fn update_aerial_state(

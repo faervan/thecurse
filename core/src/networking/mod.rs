@@ -9,7 +9,7 @@ use crate::{
 
 mod client_log;
 mod handle_udp;
-pub use handle_udp::UdpMessage;
+pub use handle_udp::{UDP_ADDR, Udp, UdpMsgToClient, UdpMsgToServer};
 pub mod io_util;
 
 pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
@@ -20,13 +20,27 @@ pub fn client_plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
         ));
 
         app.add_systems(OnEnter(game_state), setup_connection);
+        app.add_systems(Update, add_clients.run_if(in_state(game_state)));
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
 pub struct ServerConnection {
+    #[reflect(ignore, default = "default_sx")]
     pub sender: Sender<TcpMsgToServer>,
+    #[reflect(ignore, default = "default_rx")]
     pub receiver: Receiver<TcpMsgToClient>,
+    pub client_id: Option<ClientId>,
+    pub clients: HashMap<ClientId, Entity>,
+}
+
+fn default_sx() -> Sender<TcpMsgToServer> {
+    smol::channel::unbounded().0
+}
+
+fn default_rx() -> Receiver<TcpMsgToClient> {
+    smol::channel::unbounded().1
 }
 
 fn setup_connection(mut commands: Commands) {
@@ -37,6 +51,8 @@ fn setup_connection(mut commands: Commands) {
     commands.insert_resource(ServerConnection {
         sender: to_server_sx,
         receiver: to_client_rx,
+        client_id: None,
+        clients: HashMap::new(),
     });
 
     let pool = AsyncComputeTaskPool::get();
@@ -98,6 +114,14 @@ async fn handle_tcp(
     Ok(())
 }
 
+fn add_clients(
+    mut con: ResMut<ServerConnection>,
+    clients: Query<(Entity, &ClientId), Added<ClientId>>,
+) {
+    con.clients
+        .extend(clients.into_iter().map(|(e, id)| (*id, e)));
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TcpMsgToServer {
     Connect,
@@ -108,21 +132,17 @@ pub enum TcpMsgToServer {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum TcpMsgToClient {
     ConnectionRefused,
-    ConnectionAccepted {
-        clients: HashSet<ClientId>,
-        client_id: ClientId,
-        world: String,
-    },
+    ConnectionAccepted { client_id: ClientId, world: String },
     ClientConnected(ClientId),
     ClientDisconnected(ClientId),
-    Message {
-        sender: ClientId,
-        message: String,
-    },
+    Message { sender: ClientId, message: String },
 }
 
 impl TheCurseReadWriteExt for TcpMsgToServer {}
 impl TheCurseReadWriteExt for TcpMsgToClient {}
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(
+    ByteRepr, Component, Debug, Serialize, Deserialize, Reflect, PartialEq, Eq, Hash, Clone, Copy,
+)]
+#[reflect(Component)]
 pub struct ClientId(pub usize);

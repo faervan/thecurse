@@ -21,6 +21,8 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 #[reflect(Component)]
 pub struct Creature;
 
+pub const BASIC_SWORD_DAMAGE: f32 = 5.;
+
 pub trait IsCreature: Component + Default {
     const NAME: &str;
     const MAX_HEALTH: f32;
@@ -31,15 +33,14 @@ pub trait IsCreature: Component + Default {
     fn bundle() -> impl Bundle {}
 
     #[allow(unused_variables)]
-    fn on_add_hook(this: &mut EntityCommands) {}
+    fn on_add_hook(world: DeferredWorld, this: Entity) {}
 
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
         let mut cmds = world.commands();
         let mut cmds = cmds.entity(hook.entity);
-        let cmds = cmds
-            .try_insert_if_new((Self::bundle(), GameEntity, GameStateEntity))
+        cmds.try_insert_if_new((Self::bundle(), GameEntity, GameStateEntity))
             .try_insert_if_new(CreatureBundle::<Self>::default());
-        Self::on_add_hook(cmds);
+        Self::on_add_hook(world, hook.entity);
     }
 }
 

@@ -21,8 +21,6 @@ impl GltfAssetPath for PlayerWeapons {
     const PATH: &'static str = "models/Sword.glb";
 }
 
-pub const BASIC_SWORD_DAMAGE: f32 = 5.;
-
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct WeaponSocket;
@@ -54,27 +52,27 @@ impl WeaponSocketHandle {
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
         let socket_entity = world.get::<Self>(hook.entity).unwrap().0;
         let sword = world.resource::<PlayerWeapons>().sword.clone();
-        let mut id = None;
+        // let mut id = None;
         world
             .commands()
-            .spawn((Name::new("Sword"), SceneRoot(sword), ChildOf(socket_entity)))
-            .with_children(|p| {
-                id = Some(
-                    p.spawn((
-                        Transform::from_xyz(0., 4., 0.),
-                        DamageSource::new(hook.entity, BASIC_SWORD_DAMAGE),
-                        RigidBody::Kinematic,
-                        CollisionEventsEnabled,
-                        CollisionLayers::new(GameLayer::WEAPON_MELEE, GameLayer::CREATURE),
-                    ))
-                    .observe(on_collision_deal_damage)
-                    .id(),
-                );
-            });
-        let id = id.unwrap();
-        world
-            .commands()
-            .entity(hook.entity)
-            .insert(WeaponColliderHandle(id));
+            .spawn((Name::new("Sword"), SceneRoot(sword), ChildOf(socket_entity)));
+        // .with_children(|p| {
+        //     id = Some(
+        //         p.spawn((
+        //             Transform::from_xyz(0., 4., 0.),
+        //             DamageSource::new(hook.entity, BASIC_SWORD_DAMAGE),
+        //             RigidBody::Kinematic,
+        //             CollisionEventsEnabled,
+        //             CollisionLayers::new(GameLayer::WEAPON_MELEE, GameLayer::CREATURE),
+        //         ))
+        //         .observe(on_collision_deal_damage)
+        //         .id(),
+        //     );
+        // });
+        // let id = id.unwrap();
+        // world
+        //     .commands()
+        //     .entity(hook.entity)
+        //     .insert(WeaponColliderHandle(id));
     }
 }

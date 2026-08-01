@@ -44,6 +44,7 @@ pub fn serialize_scene(world: &World, query: Query<Entity, With<GameStateEntity>
         .allow_component::<Transform>()
         .allow_component::<Name>()
         .allow_component::<Health>()
+        .allow_component::<ClientId>()
         //
         // Extraction
         //

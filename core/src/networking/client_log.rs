@@ -32,7 +32,8 @@ fn spawn_text(mut commands: Commands) {
 }
 
 fn read_server_messages(
-    con: Res<ServerConnection>,
+    mut con: ResMut<ServerConnection>,
+    mut udp: ResMut<Udp>,
     query: Query<&mut Text, With<TcpConLogText>>,
     mut scenes: ResMut<Assets<DynamicScene>>,
     mut commands: Commands,
@@ -43,7 +44,14 @@ fn read_server_messages(
         loop {
             match con.receiver.try_recv() {
                 Ok(msg) => {
-                    if let TcpMsgToClient::ConnectionAccepted { ref world, .. } = msg {
+                    text.push_str(&format!("{msg:?}\n"));
+                    if let TcpMsgToClient::ConnectionAccepted {
+                        ref world,
+                        client_id,
+                    } = msg
+                    {
+                        con.client_id = Some(client_id);
+                        udp.write(UdpMsgToServer::Connect(client_id));
                         let result = SceneDeserializer {
                             type_registry: &type_registry.read(),
                         }
@@ -53,12 +61,10 @@ fn read_server_messages(
                                 info!("success!");
                                 let scene = scenes.add(scene);
                                 commands.spawn(DynamicSceneRoot(scene));
-                                commands.spawn(MainCharacter);
                             }
                             Err(e) => error!("Scene deserialization failed: {e}"),
                         }
                     }
-                    text.push_str(&format!("{msg:?}\n"))
                 }
                 Err(smol::channel::TryRecvError::Empty) => break,
                 Err(smol::channel::TryRecvError::Closed) => {

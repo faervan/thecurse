@@ -1,4 +1,4 @@
-use crate::{creatures::behavior::CreatureDirectionToTarget, prelude::*};
+use crate::prelude::*;
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -67,8 +67,8 @@ impl IsCreature for Goblin {
             GoblinBehavior::new(GoblinBehaviorState::Idle),
         )
     }
-    fn on_add_hook(this: &mut EntityCommands) {
-        this.observe(
+    fn on_add_hook(mut world: DeferredWorld, this: Entity) {
+        world.commands().entity(this).observe(
             |event: On<CreatureTargetUnreachable>, mut commands: Commands| {
                 let entity = event.event_target();
                 commands.entity(entity).insert(RetryMoveToTarget(Timer::new(

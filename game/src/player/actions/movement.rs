@@ -1,10 +1,8 @@
-use crate::{
-    player::{
-        PlayerCharacterHandle,
-        actions::{aerial::AerialState, attack::AttackState},
-    },
-    prelude::*,
+use thecurse_core::creatures::player::{
+    AERIAL_MOVEMENT_FACTOR, AerialState, AttackState, MOVEMENT_SPEED, MovementState,
 };
+
+use crate::{player::PlayerCharacterHandle, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -13,15 +11,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Reflect, Debug, Default)]
-#[reflect(Component)]
-pub struct MovementState {
-    pub direction: Vec3,
-}
-
-const MOVEMENT_SPEED: f32 = 10.;
 const MOVEMENT_ANIMATION_SPEED: f32 = 1. + MOVEMENT_SPEED * 0.1;
-const AERIAL_MOVEMENT_FACTOR: f32 = 0.8;
 
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,

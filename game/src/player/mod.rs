@@ -1,4 +1,4 @@
-use crate::{player::actions::CharacterActions, prelude::*};
+use crate::prelude::*;
 
 mod actions;
 mod asset_loading;
@@ -35,11 +35,7 @@ fn on_player_spawn(
 ) {
     commands
         .entity(event.entity)
-        .try_insert((
-            SceneRoot(character.scene.clone()),
-            ShowHealthBar::default(),
-            CharacterActions::default(),
-        ))
+        .try_insert((SceneRoot(character.scene.clone()), ShowHealthBar::default()))
         .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
         .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
 }
