@@ -55,7 +55,7 @@ fn main() {
         Update,
         (
             set_state_menu.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
-            set_state_menu
+            return_to_menu
                 .run_if(in_state(AppState::Game).and(input_just_pressed(KeyCode::Escape))),
         ),
     );
@@ -73,4 +73,11 @@ pub enum AppState {
 
 fn set_state_menu(mut next_state: ResMut<NextState<AppState>>) {
     next_state.set(AppState::Menu);
+}
+
+fn return_to_menu(mut next_state: ResMut<NextState<AppState>>, mut udp: ResMut<Udp>) {
+    next_state.set(AppState::Menu);
+    info!("Sending disconnect notification to server");
+    udp.write(UdpMsgToServer::Disconnect);
+    udp.send().unwrap();
 }

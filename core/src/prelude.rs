@@ -39,4 +39,6 @@ pub use crate::environment::*;
 
 pub use crate::spells::SpawnSpellVoid;
 
-pub use crate::networking::{ClientId, Udp, UdpMsgToClient, UdpMsgToServer};
+pub use crate::networking::{
+    ClientId, Udp, UdpMsgToClient, UdpMsgToServer, UdpToClient, UdpToServer,
+};

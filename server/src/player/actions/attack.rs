@@ -14,7 +14,14 @@ fn broadcast_attack(
         if let AttackState::Attacking { timer, ty } = state
             && timer.elapsed().is_zero()
         {
-            udp.breadcast_except(UdpMsgToClient::PlayerAttack { id: *id, ty: *ty }, **addr);
+            let (com, clients) = udp.borrow_mut();
+            let mut iter = com.iter_mut();
+            while let Some(com) = iter.next() {
+                if com.addr == **addr {
+                    continue;
+                }
+                clients.write_to_com(UdpMsgToClient::PlayerAttack { id: *id, ty: *ty }, com);
+            }
         }
     }
 }

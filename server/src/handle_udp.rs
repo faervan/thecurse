@@ -3,51 +3,111 @@ use thecurse_core::{creatures::player::AttackState, networking::UDP_ADDR};
 use crate::{clients::ConnectedClients, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Startup, setup);
+    app.init_resource::<Udp>();
 
     app.add_systems(FixedUpdate, read_udp);
 }
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct Udp(MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>);
-
-fn setup(mut commands: Commands) {
-    let com = MultiUdpCommunicator::bind(UDP_ADDR)
-        .with_fake_unreliablity()
-        .with_debug_logs();
-    commands.insert_resource(Udp(com));
+pub struct Udp {
+    #[deref]
+    inner: MultiUdpCommunicator<UdpToClient, UdpToServer>,
+    pub clients: ConnectedClients,
 }
 
-fn read_udp(mut udp: ResMut<Udp>, mut clients: ResMut<ConnectedClients>, mut commands: Commands) {
-    udp.tick(|addr, mut com, mut delayed| {
-        while let Some(msg) = com.read() {
-            debug!("Received msg {msg:?} from {addr:?} via UDP");
+impl Default for Udp {
+    fn default() -> Self {
+        Self {
+            inner: MultiUdpCommunicator::bind(UDP_ADDR)
+                .with_fake_unreliablity()
+                .with_debug_logs(),
+            clients: ConnectedClients::default(),
+        }
+    }
+}
+
+impl Udp {
+    pub fn flush_pending_messages(&mut self) {
+        self.clients.flush_pending_messages(&mut self.inner);
+    }
+
+    pub fn borrow_mut(
+        &mut self,
+    ) -> (
+        &mut MultiUdpCommunicator<UdpToClient, UdpToServer>,
+        &mut ConnectedClients,
+    ) {
+        (&mut self.inner, &mut self.clients)
+    }
+
+    pub fn remove_stale_clients(&mut self, commands: &mut Commands) {
+        self.inner.retain(|com| {
+            if com.last_seen().elapsed() > Duration::from_secs(5) {
+                info!("Removing client {:?} due to inactivity", com.addr);
+                if let Some(entity) = self.clients.remove(com.addr) {
+                    commands.entity(entity).despawn();
+                }
+                return false;
+            }
+            true
+        });
+    }
+}
+
+fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
+    let (com, clients) = udp.borrow_mut();
+    com.recv(|mut com: UdpCommunicatorMut<_, _>| {
+        while let Some(UdpToServer {
+            id: last_processed_id,
+            msg,
+        }) = com.read_ordered()
+        {
+            debug!(
+                "Received msg {msg:?} (#{last_processed_id}) from {:?} via UDP",
+                com.addr
+            );
             match msg {
                 UdpMsgToServer::Connect(id) => {
-                    let Some(entity) = clients.client_entities.get(&id) else {
-                        continue;
-                    };
-                    commands.entity(*entity).insert(ClientAddr(addr));
-                    clients.client_addrs.insert(id, addr);
-                    clients.addr_clients.insert(addr, id);
-                    com.write(UdpMsgToClient::Connected);
-                    delayed.broadcast_except(UdpMsgToClient::PlayerConnected { id }, addr);
+                    let entity = commands
+                        .spawn((
+                            Player,
+                            Name::new(format!("Player #{}", id.0)),
+                            id,
+                            ClientAddr(com.addr),
+                        ))
+                        .id();
+                    clients.insert(id, last_processed_id, com.addr, entity);
+                    com.write_ordered(UdpToClient {
+                        last_processed_id,
+                        msg: UdpMsgToClient::Connected,
+                    });
                 }
-                UdpMsgToServer::Hello(_) => {}
-                UdpMsgToServer::PlayerAttack { ty } => {
-                    let id = clients.addr_clients.get(&addr).unwrap();
-                    clients.client_entities.get(id).unwrap();
-                    if let Some(id) = clients.addr_clients.get(&addr)
-                        && let Some(entity) = clients.client_entities.get(id)
-                    {
-                        debug!("attack! {id:?} does {ty:?}");
-                        commands.entity(*entity).insert(AttackState::Attacking {
-                            timer: Timer::new(ty.duration(), TimerMode::Once),
-                            ty,
-                        });
+                UdpMsgToServer::Disconnect => {
+                    let entity = clients.remove(com.addr).unwrap();
+                    commands.entity(entity).despawn();
+                }
+                msg => {
+                    let id = clients
+                        .update_last_msg(last_processed_id, &com.addr)
+                        .unwrap();
+                    match msg {
+                        UdpMsgToServer::PlayerAttack { ty } => {
+                            if let Some(entity) = clients.get_client_entity(&id) {
+                                debug!("attack! {id:?} does {ty:?}");
+                                commands.entity(entity).insert(AttackState::Attacking {
+                                    timer: Timer::new(ty.duration(), TimerMode::Once),
+                                    ty,
+                                });
+                            }
+                        }
+                        UdpMsgToServer::PlayerMovement { dir: _ } => unimplemented!(),
+                        UdpMsgToServer::Connect(_) | UdpMsgToServer::Disconnect => unreachable!(),
                     }
                 }
             }
         }
     });
+    udp.remove_stale_clients(&mut commands);
+    udp.flush_pending_messages();
+    udp.send();
 }

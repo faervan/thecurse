@@ -3,7 +3,6 @@ use std::sync::Arc;
 use bevy::tasks::AsyncComputeTaskPool;
 use futures::{FutureExt as _, select};
 use smol::{
-    channel::unbounded,
     io::{AsyncReadExt as _, AsyncWriteExt as _},
     lock::RwLock,
     net::{TcpListener, TcpStream},
@@ -11,8 +10,6 @@ use smol::{
 };
 
 use crate::{
-    clients::{TcpClientChange, TcpClientChanges},
-    commands::{TcpCommand, TcpCommandQueue},
     prelude::*,
     scene::{self, SerializedScene},
 };
@@ -28,15 +25,9 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn start_server(scene: Res<SerializedScene>, mut commands: Commands) {
+fn start_server(scene: Res<SerializedScene>) {
     let pool = AsyncComputeTaskPool::get();
-    let (sx, rx) = unbounded();
-    commands.insert_resource(TcpCommandQueue { receiver: rx });
-    let (change_sx, rx) = unbounded();
-    commands.insert_resource(TcpClientChanges { rx });
     pool.spawn(handle_send_to_server(
-        sx,
-        change_sx,
         scene.notify.clone(),
         scene.world.clone(),
     ))
@@ -44,17 +35,11 @@ fn start_server(scene: Res<SerializedScene>, mut commands: Commands) {
 }
 
 async fn handle_send_to_server(
-    command_sx: Sender<TcpCommand>,
-    client_change_sx: Sender<TcpClientChange>,
     notify: Arc<event_listener::Event>,
     world: Arc<RwLock<String>>,
 ) -> Result<(), TcpHandlerError> {
     let listener = TcpListener::bind("127.0.0.1:7189").await?;
-    let store = Arc::new(RwLock::new(ClientStore::new(
-        command_sx,
-        client_change_sx,
-        world,
-    )));
+    let store = Arc::new(RwLock::new(ClientStore::new(world)));
 
     loop {
         match listener.accept().await {

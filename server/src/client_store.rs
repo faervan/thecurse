@@ -2,11 +2,9 @@ use std::sync::Arc;
 
 use smol::{channel::SendError, lock::RwLock};
 
-use crate::{clients::TcpClientChange, commands::TcpCommand, prelude::*};
+use crate::prelude::*;
 
 pub struct ClientStore {
-    command_sx: Sender<TcpCommand>,
-    change_sx: Sender<TcpClientChange>,
     world: Arc<RwLock<String>>,
     next_id: usize,
     clients: HashMap<ClientId, Sender<TcpMsgToClient>>,
@@ -15,14 +13,8 @@ pub struct ClientStore {
 }
 
 impl ClientStore {
-    pub fn new(
-        command_sx: Sender<TcpCommand>,
-        change_sx: Sender<TcpClientChange>,
-        world: Arc<RwLock<String>>,
-    ) -> Self {
+    pub fn new(world: Arc<RwLock<String>>) -> Self {
         Self {
-            command_sx,
-            change_sx,
             world,
             next_id: 0,
             clients: HashMap::new(),
@@ -47,25 +39,11 @@ impl ClientStore {
         self.clients.insert(id, sx.clone());
         self.broadcast.push(sx);
 
-        self.command_sx
-            .send(TcpCommand::SpawnPlayer { client_id: id })
-            .await
-            .unwrap();
-
-        self.change_sx
-            .send(TcpClientChange::ClientConnect { id })
-            .await
-            .unwrap();
-
         Ok((id, rx))
     }
 
     pub async fn remove_client(&mut self, id: &ClientId) -> Result<(), SendError<TcpMsgToClient>> {
         self.clients.remove(id);
-        self.change_sx
-            .send(TcpClientChange::ClientDisconnect { id: *id })
-            .await
-            .unwrap();
         self.broadcast = self.clients.values().cloned().collect();
         self.broadcast(&TcpMsgToClient::ClientDisconnected(*id))
             .await?;
