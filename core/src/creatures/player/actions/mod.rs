@@ -18,6 +18,35 @@ pub struct CharacterActions {
 
 #[derive(ByteRepr, Debug, Clone)]
 pub enum PlayerAction {
-    Attack { ty: AttackType },
+    Attack {
+        ty: AttackType,
+        translation: [f32; 3],
+        rotation: [f32; 4],
+    },
     Movement,
+}
+
+impl PlayerAction {
+    pub fn apply(self, entity: Entity, commands: &mut Commands) {
+        match self {
+            Self::Attack {
+                ty,
+                translation,
+                rotation,
+            } => {
+                commands
+                    .entity(entity)
+                    .insert(AttackState::Attacking {
+                        timer: Timer::new(ty.duration(), TimerMode::Once),
+                        ty,
+                    })
+                    .entry::<Transform>()
+                    .and_modify(move |mut pos| {
+                        pos.translation = Vec3::from_array(translation);
+                        pos.rotation = Quat::from_array(rotation)
+                    });
+            }
+            Self::Movement => todo!(),
+        }
+    }
 }

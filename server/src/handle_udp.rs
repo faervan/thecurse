@@ -79,16 +79,13 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                 UdpMsgToServer::Action { id, action } => {
                     let id = clients.update_last_msg(id, &com.addr).unwrap();
                     match action {
-                        PlayerAction::Attack { ty } => {
-                            if let Some(entity) = clients.get_client_entity(&id) {
-                                debug!("attack! {id:?} does {ty:?}");
-                                commands.entity(entity).insert(AttackState::Attacking {
-                                    timer: Timer::new(ty.duration(), TimerMode::Once),
-                                    ty,
-                                });
-                            }
+                        PlayerAction::Attack { ty, .. } => {
+                            debug!("attack! {id:?} does {ty:?}");
                         }
                         PlayerAction::Movement => unimplemented!(),
+                    }
+                    if let Some(entity) = clients.get_client_entity(&id) {
+                        action.apply(entity, &mut commands);
                     }
                 }
             }

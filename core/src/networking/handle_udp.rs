@@ -3,10 +3,7 @@ use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
 
-use crate::{
-    creatures::player::AttackState, networking::ServerConnection, prelude::*,
-    utils::wrapping::wrapping_le,
-};
+use crate::{networking::ServerConnection, prelude::*, utils::wrapping::wrapping_le};
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
     move |app: &mut App| {
@@ -128,17 +125,11 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
         }
         UdpMsgToClient::PlayerAction {
             client_id, action, ..
-        } => match action {
-            PlayerAction::Attack { ty } => {
-                if let Some(entity) = con.clients.get(&client_id) {
-                    commands.entity(*entity).insert(AttackState::Attacking {
-                        timer: Timer::new(ty.duration(), TimerMode::Once),
-                        ty,
-                    });
-                }
+        } => {
+            if let Some(entity) = con.clients.get(&client_id) {
+                action.apply(*entity, &mut commands);
             }
-            PlayerAction::Movement => todo!(),
-        },
+        }
     });
     udp.send();
 }
