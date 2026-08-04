@@ -18,7 +18,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<SerializedScene>();
     app.add_systems(Startup, (scene::setup, start_server));
     app.add_systems(
-        FixedUpdate,
+        ServerBroadcast,
         scene::serialize_scene
             .pipe(scene::publish_scene)
             .run_if(scene::scene_requested),

@@ -5,7 +5,7 @@ use crate::{clients::ConnectedClients, prelude::*};
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<Udp>();
 
-    app.add_systems(FixedUpdate, read_udp);
+    app.add_systems(ServerBroadcast, read_udp);
 }
 
 #[derive(Resource, Deref, DerefMut)]
