@@ -1,17 +1,15 @@
 use bevy::scene::serde::SceneDeserializer;
 use serde::de::DeserializeSeed;
 
-use crate::{
-    networking::{ServerConnection, TcpMsgToClient},
-    prelude::*,
-};
+use crate::prelude::*;
 
-pub fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
-    move |app: &mut App| {
-        app.add_systems(OnEnter(game_state), spawn_text);
+pub(super) fn plugin(app: &mut App) {
+    app.add_systems(OnEnter(AppState::Game), spawn_text);
 
-        app.add_systems(Update, read_server_messages.run_if(in_state(game_state)));
-    }
+    app.add_systems(
+        Update,
+        read_server_messages.run_if(in_state(AppState::Game)),
+    );
 }
 
 #[derive(Component)]

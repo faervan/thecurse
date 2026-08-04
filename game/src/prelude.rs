@@ -16,6 +16,9 @@ pub use crate::utils::gltf_instance_hooks::{
 pub use crate::utils::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::utils::gltf_loading::{GltfAssetPath, GltfLoadingHandle};
 
+pub use crate::networking::tcp::ServerConnection;
+pub use crate::networking::udp::Udp;
+
 pub use crate::camera::{CameraController, CameraControllerAnchor};
 
 pub use crate::hud::health_bar::ShowHealthBar;

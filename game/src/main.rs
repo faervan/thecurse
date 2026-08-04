@@ -3,10 +3,12 @@ use thecurse_core::{asset_plugin, assets::all_assets_loaded};
 use crate::prelude::*;
 
 mod camera;
+mod console;
 mod debug;
 mod environment;
 mod hud;
 mod menu;
+mod networking;
 mod npcs;
 mod player;
 mod prelude;
@@ -40,7 +42,9 @@ fn main() {
         camera::CameraControllerPlugin::new(AppState::Game),
         menu::plugin,
         utils::plugin,
+        networking::plugin,
         hud::plugin,
+        console::plugin,
         scenes::plugin,
         environment::plugin,
         weapon::plugin,

@@ -1,18 +1,13 @@
 use bevy_console::{AddConsoleCommand as _, ConsoleCommand, ConsolePlugin};
 use clap::Parser;
 
-use crate::{
-    networking::{ServerConnection, TcpMsgToServer},
-    prelude::*,
-};
+use crate::prelude::*;
 
-pub(super) fn plugin<STATE: States + Copy>(_game_state: STATE) -> impl Plugin {
-    move |app: &mut App| {
-        app.add_plugins(ConsolePlugin);
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(ConsolePlugin);
 
-        app.add_console_command::<ChatMessageCmd, _>(send_message);
-        app.add_console_command::<TeleportCmd, _>(teleport);
-    }
+    app.add_console_command::<ChatMessageCmd, _>(send_message);
+    app.add_console_command::<TeleportCmd, _>(teleport);
 }
 
 /// Send a message to the global chat

@@ -4,7 +4,6 @@ use prelude::*;
 
 pub mod animation;
 pub mod assets;
-mod console;
 pub mod creatures;
 pub mod environment;
 pub mod items;
@@ -37,8 +36,6 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             shader_utils::plugin,
             animation::AnimationPlugin,
             navmesh::plugin(game_state),
-            networking::client_plugin(game_state),
-            console::plugin(game_state),
             creatures::plugin(game_state),
             spells::plugin(game_state),
             terrain::plugin(game_state),

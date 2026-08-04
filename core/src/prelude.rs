@@ -1,3 +1,4 @@
+pub use std::collections::VecDeque;
 pub use std::f32::consts::{PI, TAU};
 pub use std::marker::PhantomData;
 pub use std::ops::{Deref, DerefMut};
@@ -39,4 +40,7 @@ pub use crate::environment::*;
 
 pub use crate::spells::SpawnSpellVoid;
 
-pub use crate::networking::{ClientId, Udp, UdpMsgToClient, UdpMsgToServer};
+pub use crate::networking::{
+    ClientId, TcpMsgToClient, TcpMsgToServer, UdpMsgToClient, UdpMsgToServer,
+    io_util::TheCurseReadWriteExt as _,
+};

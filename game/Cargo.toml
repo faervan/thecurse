@@ -13,9 +13,16 @@ thecurse_core.workspace = true
 
 bevy.workspace = true
 bevy-inspector-egui = { workspace = true, optional = true }
+bevy_console.workspace = true
 
 thiserror.workspace = true
 rand.workspace = true
+clap.workspace = true
+
+serde.workspace = true
+ron.workspace = true
+smol.workspace = true
+futures.workspace = true
 
 [lints]
 workspace = true
