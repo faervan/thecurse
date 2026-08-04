@@ -46,6 +46,8 @@ impl Udp {
                 info!("Removing client {:?} due to inactivity", com.addr);
                 if let Some(entity) = self.clients.remove(com.addr) {
                     commands.entity(entity).despawn();
+                } else {
+                    warn!("Failed to remove client: client does not exist anymore");
                 }
                 return false;
             }

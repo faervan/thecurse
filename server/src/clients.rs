@@ -103,9 +103,8 @@ impl ConnectedClients {
         info!("Removed client {:?}", client.id);
 
         // Broadcast disconnect
-        for client in self.addr_clients.values_mut() {
-            client
-                .pending_messages
+        for c in self.addr_clients.values_mut() {
+            c.pending_messages
                 .push_back(UdpMsgToClient::PlayerDisconnected { id: client.id })
         }
 
