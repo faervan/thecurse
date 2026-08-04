@@ -44,7 +44,7 @@ fn update_attack_state(
             }
 
             if let Some(ty) = attack {
-                udp.write(UdpMsgToServer::PlayerAttack { ty });
+                udp.write_action(PlayerAction::Attack { ty });
                 *attack_state = AttackState::Attacking {
                     timer: Timer::new(ty.duration(), TimerMode::Once),
                     ty,

@@ -9,11 +9,12 @@ pub struct ConnectedClients {
     client_entities: HashMap<ClientId, Entity>,
     addr_clients: HashMap<SocketAddr, ConnectedClient>,
     client_addrs: HashMap<ClientId, SocketAddr>,
+    pending_action_broadcasts: Vec<(ClientId, PlayerAction)>,
 }
 
 struct ConnectedClient {
     id: ClientId,
-    last_processed_msg: u16,
+    last_processed_action: u16,
     pending_messages: VecDeque<UdpMsgToClient>,
 }
 
@@ -21,7 +22,7 @@ impl ConnectedClients {
     pub fn insert(
         &mut self,
         id: ClientId,
-        last_processed_msg: u16,
+        last_processed_action: u16,
         addr: SocketAddr,
         entity: Entity,
     ) {
@@ -31,7 +32,7 @@ impl ConnectedClients {
             addr,
             ConnectedClient {
                 id,
-                last_processed_msg,
+                last_processed_action,
                 pending_messages: VecDeque::new(),
             },
         );
@@ -45,16 +46,8 @@ impl ConnectedClients {
             });
     }
 
-    pub fn write_to_com(
-        &self,
-        msg: UdpMsgToClient,
-        mut com: UdpCommunicatorMut<UdpToClient, UdpToServer>,
-    ) {
-        let client = self.addr_clients.get(&com.addr).unwrap();
-        com.write_ordered(UdpToClient {
-            last_processed_id: client.last_processed_msg,
-            msg,
-        });
+    pub fn broadcast_action(&mut self, client_id: ClientId, action: PlayerAction) {
+        self.pending_action_broadcasts.push((client_id, action));
     }
 
     pub fn update_last_msg(
@@ -63,32 +56,40 @@ impl ConnectedClients {
         addr: &SocketAddr,
     ) -> Option<ClientId> {
         self.addr_clients.get_mut(addr).map(|client| {
-            client.last_processed_msg = last_processed_msg;
+            client.last_processed_action = last_processed_msg;
             client.id
         })
     }
 
     pub fn flush_pending_messages(
         &mut self,
-        udp: &mut MultiUdpCommunicator<UdpToClient, UdpToServer>,
+        udp: &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
     ) {
         let mut iter = udp.iter_mut();
         while let Some(mut com) = iter.next() {
             let Some(ConnectedClient {
-                last_processed_msg,
+                id,
+                last_processed_action,
                 pending_messages,
-                ..
             }) = self.addr_clients.get_mut(&com.addr)
             else {
                 continue;
             };
             for msg in pending_messages.drain(..) {
-                com.write_ordered(UdpToClient {
-                    last_processed_id: *last_processed_msg,
-                    msg,
+                com.write_ordered(msg);
+            }
+            for (client_id, action) in self.pending_action_broadcasts.clone() {
+                if *id == client_id {
+                    continue;
+                }
+                com.write_ordered(UdpMsgToClient::PlayerAction {
+                    client_id,
+                    last_processed_action: *last_processed_action,
+                    action,
                 });
             }
         }
+        self.pending_action_broadcasts.clear();
     }
 
     pub fn get_client_entity(&self, client_id: &ClientId) -> Option<Entity> {

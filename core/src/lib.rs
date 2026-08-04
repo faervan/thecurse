@@ -13,6 +13,7 @@ pub mod networking;
 mod shader_utils;
 pub mod spells;
 pub mod terrain;
+pub mod utils;
 
 mod shared;
 pub use shared::*;

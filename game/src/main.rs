@@ -77,7 +77,5 @@ fn set_state_menu(mut next_state: ResMut<NextState<AppState>>) {
 
 fn return_to_menu(mut next_state: ResMut<NextState<AppState>>, mut udp: ResMut<Udp>) {
     next_state.set(AppState::Menu);
-    info!("Sending disconnect notification to server");
-    udp.write(UdpMsgToServer::Disconnect);
-    udp.send().unwrap();
+    udp.disconnect();
 }

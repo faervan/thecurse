@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    creatures::player::{AttackState, AttackType},
-    networking::ServerConnection,
-    prelude::*,
+    creatures::player::AttackState, networking::ServerConnection, prelude::*,
+    utils::wrapping::wrapping_le,
 };
 
 pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
@@ -20,52 +19,86 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 pub const UDP_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 7188);
 
 #[derive(ByteRepr, Debug, Clone)]
-pub struct UdpToServer {
-    pub id: u16,
-    pub msg: UdpMsgToServer,
-}
-
-#[derive(ByteRepr, Debug, Clone)]
-pub struct UdpToClient {
-    /// The id of the last [UdpMsgToServer] sent by the client that was processed by the server at
-    /// the time this [UdpMsgToClient] was constructed.
-    pub last_processed_id: u16,
-    pub msg: UdpMsgToClient,
-}
-
-#[derive(ByteRepr, Debug, Clone)]
 pub enum UdpMsgToServer {
     Connect(ClientId),
     Disconnect,
-    PlayerAttack { ty: AttackType },
-    PlayerMovement { dir: [f32; 3] },
+    Action { id: u16, action: PlayerAction },
 }
 
 #[derive(ByteRepr, Debug, Clone)]
 pub enum UdpMsgToClient {
     Connected,
-    PlayerConnected { id: ClientId },
-    PlayerDisconnected { id: ClientId },
-    PlayerAttack { id: ClientId, ty: AttackType },
+    PlayerConnected {
+        id: ClientId,
+    },
+    PlayerDisconnected {
+        id: ClientId,
+    },
+    PlayerAction {
+        client_id: ClientId,
+        /// The id of the last [UdpMsgToServer] sent by the client that was processed by the server at
+        /// the time this [UdpMsgToClient] was constructed.
+        last_processed_action: u16,
+        action: PlayerAction,
+    },
 }
 
-#[derive(Resource, Default, Deref, DerefMut)]
+#[derive(Resource, Default)]
 pub struct Udp {
     next_id: u16,
-    msg_cache: VecDeque<UdpToServer>,
-    #[deref]
-    com: UdpCommunicator<UdpToServer, UdpToClient>,
+    action_cache: VecDeque<(u16, PlayerAction)>,
+    com: UdpCommunicator<UdpMsgToServer, UdpMsgToClient>,
 }
 
 impl Udp {
+    #[inline(always)]
     pub fn write(&mut self, msg: UdpMsgToServer) {
-        let msg = UdpToServer {
+        self.com.write_ordered(msg);
+    }
+
+    pub fn write_action(&mut self, action: PlayerAction) {
+        self.action_cache.push_back((self.next_id, action.clone()));
+        let msg = UdpMsgToServer::Action {
             id: self.next_id,
-            msg,
+            action,
         };
-        self.msg_cache.push_back(msg.clone());
         self.com.write_ordered(msg);
         self.next_id = self.next_id.wrapping_add(1);
+    }
+
+    pub fn send(&mut self) {
+        if self.com.last_send().elapsed().as_millis() > 200 {
+            self.com.write_heartbeat();
+        }
+        self.com.send().unwrap();
+    }
+
+    pub fn recv_with<F>(&mut self, mut f: F)
+    where
+        F: FnMut(UdpMsgToClient),
+    {
+        self.com.recv();
+        while let Some(msg) = self.com.read_ordered() {
+            debug!("Received msg via UDP: {msg:?}");
+            if let UdpMsgToClient::PlayerAction {
+                last_processed_action,
+                ..
+            } = msg
+            {
+                while self
+                    .action_cache
+                    .pop_front_if(|m| wrapping_le(m.0, last_processed_action))
+                    .is_some()
+                {}
+            }
+            f(msg)
+        }
+    }
+
+    pub fn disconnect(&mut self) {
+        info!("Sending disconnect notification to server");
+        self.write(UdpMsgToServer::Disconnect);
+        self.com.send().unwrap();
     }
 }
 
@@ -76,42 +109,36 @@ fn setup(mut commands: Commands) {
 }
 
 fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut commands: Commands) {
-    udp.recv();
-    while let Some(UdpToClient {
-        last_processed_id,
-        msg,
-    }) = udp.read_ordered()
-    {
-        debug!("Received msg via UDP: {msg:?}, last_processed_id: {last_processed_id}");
-        match msg {
-            UdpMsgToClient::Connected => {
-                let Some(client_id) = con.client_id else {
-                    error!("ClientId not initialized, not spawning player");
-                    continue;
-                };
-                commands.spawn((MainCharacter, client_id));
+    udp.recv_with(|msg| match msg {
+        UdpMsgToClient::Connected => {
+            let Some(client_id) = con.client_id else {
+                error!("ClientId not initialized, not spawning player");
+                return;
+            };
+            commands.spawn((MainCharacter, client_id));
+        }
+        UdpMsgToClient::PlayerConnected { id } => {
+            commands.spawn((Player, id));
+        }
+        UdpMsgToClient::PlayerDisconnected { id } => {
+            if let Some(entity) = con.clients.get(&id) {
+                debug!("Despawning player #{id:?} ({entity})");
+                commands.entity(*entity).despawn();
             }
-            UdpMsgToClient::PlayerConnected { id } => {
-                commands.spawn((Player, id));
-            }
-            UdpMsgToClient::PlayerAttack { id, ty } => {
-                if let Some(entity) = con.clients.get(&id) {
+        }
+        UdpMsgToClient::PlayerAction {
+            client_id, action, ..
+        } => match action {
+            PlayerAction::Attack { ty } => {
+                if let Some(entity) = con.clients.get(&client_id) {
                     commands.entity(*entity).insert(AttackState::Attacking {
                         timer: Timer::new(ty.duration(), TimerMode::Once),
                         ty,
                     });
                 }
             }
-            UdpMsgToClient::PlayerDisconnected { id } => {
-                if let Some(entity) = con.clients.get(&id) {
-                    debug!("Despawning player #{id:?} ({entity})");
-                    commands.entity(*entity).despawn();
-                }
-            }
-        }
-    }
-    if udp.last_send().elapsed().as_millis() > 200 {
-        udp.write_heartbeat();
-    }
-    udp.send().unwrap();
+            PlayerAction::Movement => todo!(),
+        },
+    });
+    udp.send();
 }

@@ -11,7 +11,7 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Resource, Deref, DerefMut)]
 pub struct Udp {
     #[deref]
-    inner: MultiUdpCommunicator<UdpToClient, UdpToServer>,
+    inner: MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
     pub clients: ConnectedClients,
 }
 
@@ -34,7 +34,7 @@ impl Udp {
     pub fn borrow_mut(
         &mut self,
     ) -> (
-        &mut MultiUdpCommunicator<UdpToClient, UdpToServer>,
+        &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
         &mut ConnectedClients,
     ) {
         (&mut self.inner, &mut self.clients)
@@ -57,15 +57,8 @@ impl Udp {
 fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
     let (com, clients) = udp.borrow_mut();
     com.recv(|mut com: UdpCommunicatorMut<_, _>| {
-        while let Some(UdpToServer {
-            id: last_processed_id,
-            msg,
-        }) = com.read_ordered()
-        {
-            debug!(
-                "Received msg {msg:?} (#{last_processed_id}) from {:?} via UDP",
-                com.addr
-            );
+        while let Some(msg) = com.read_ordered() {
+            debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
             match msg {
                 UdpMsgToServer::Connect(id) => {
                     let entity = commands
@@ -76,22 +69,17 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                             ClientAddr(com.addr),
                         ))
                         .id();
-                    clients.insert(id, last_processed_id, com.addr, entity);
-                    com.write_ordered(UdpToClient {
-                        last_processed_id,
-                        msg: UdpMsgToClient::Connected,
-                    });
+                    clients.insert(id, u16::MAX, com.addr, entity);
+                    com.write_ordered(UdpMsgToClient::Connected);
                 }
                 UdpMsgToServer::Disconnect => {
                     let entity = clients.remove(com.addr).unwrap();
                     commands.entity(entity).despawn();
                 }
-                msg => {
-                    let id = clients
-                        .update_last_msg(last_processed_id, &com.addr)
-                        .unwrap();
-                    match msg {
-                        UdpMsgToServer::PlayerAttack { ty } => {
+                UdpMsgToServer::Action { id, action } => {
+                    let id = clients.update_last_msg(id, &com.addr).unwrap();
+                    match action {
+                        PlayerAction::Attack { ty } => {
                             if let Some(entity) = clients.get_client_entity(&id) {
                                 debug!("attack! {id:?} does {ty:?}");
                                 commands.entity(entity).insert(AttackState::Attacking {
@@ -100,8 +88,7 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                                 });
                             }
                         }
-                        UdpMsgToServer::PlayerMovement { dir: _ } => unimplemented!(),
-                        UdpMsgToServer::Connect(_) | UdpMsgToServer::Disconnect => unreachable!(),
+                        PlayerAction::Movement => unimplemented!(),
                     }
                 }
             }

@@ -15,3 +15,9 @@ pub struct CharacterActions {
     pub movement: MovementState,
     pub attack: AttackState,
 }
+
+#[derive(ByteRepr, Debug, Clone)]
+pub enum PlayerAction {
+    Attack { ty: AttackType },
+    Movement,
+}

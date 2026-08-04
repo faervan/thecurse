@@ -8,20 +8,14 @@ pub fn plugin(app: &mut App) {
 
 fn broadcast_attack(
     mut udp: ResMut<Udp>,
-    query: Query<(&AttackState, &ClientId, &ClientAddr), Changed<AttackState>>,
+    query: Query<(&AttackState, &ClientId), Changed<AttackState>>,
 ) {
-    for (state, id, addr) in query {
+    for (state, id) in query {
         if let AttackState::Attacking { timer, ty } = state
             && timer.elapsed().is_zero()
         {
-            let (com, clients) = udp.borrow_mut();
-            let mut iter = com.iter_mut();
-            while let Some(com) = iter.next() {
-                if com.addr == **addr {
-                    continue;
-                }
-                clients.write_to_com(UdpMsgToClient::PlayerAttack { id: *id, ty: *ty }, com);
-            }
+            udp.clients
+                .broadcast_action(*id, PlayerAction::Attack { ty: *ty });
         }
     }
 }
