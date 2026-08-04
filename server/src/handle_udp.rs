@@ -1,4 +1,4 @@
-use thecurse_core::{creatures::player::AttackState, networking::UDP_ADDR};
+use thecurse_core::networking::UDP_ADDR;
 
 use crate::{clients::ConnectedClients, prelude::*};
 
@@ -18,9 +18,7 @@ pub struct Udp {
 impl Default for Udp {
     fn default() -> Self {
         Self {
-            inner: MultiUdpCommunicator::bind(UDP_ADDR)
-                .with_fake_unreliablity()
-                .with_debug_logs(),
+            inner: MultiUdpCommunicator::bind(UDP_ADDR).with_fake_unreliablity(),
             clients: ConnectedClients::default(),
         }
     }
@@ -84,7 +82,14 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                         PlayerAction::Attack { ty, .. } => {
                             debug!("attack! {id:?} does {ty:?}");
                         }
-                        PlayerAction::Movement => unimplemented!(),
+                        PlayerAction::Movement { .. } => {
+                            clients.broadcast_action(id, action.clone());
+                            debug!("Player {id:?} moves");
+                        }
+                        PlayerAction::MovementStop { translation } => {
+                            clients.broadcast_action(id, action.clone());
+                            debug!("Player {id:?} stopped moving at {translation:?}");
+                        }
                     }
                     if let Some(entity) = clients.get_client_entity(&id) {
                         action.apply(entity, &mut commands);

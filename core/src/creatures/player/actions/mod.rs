@@ -23,7 +23,13 @@ pub enum PlayerAction {
         translation: [f32; 3],
         rotation: [f32; 4],
     },
-    Movement,
+    Movement {
+        origin: [f32; 3],
+        direction: [f32; 3],
+    },
+    MovementStop {
+        translation: [f32; 3],
+    },
 }
 
 impl PlayerAction {
@@ -46,7 +52,23 @@ impl PlayerAction {
                         pos.rotation = Quat::from_array(rotation)
                     });
             }
-            Self::Movement => todo!(),
+            Self::Movement { origin, direction } => {
+                commands
+                    .entity(entity)
+                    .entry::<Transform>()
+                    .and_modify(move |mut pos| {
+                        pos.translation = Vec3::from_array(origin);
+                        pos.look_to(-Vec3::from_array(direction), Vec3::Y);
+                    });
+            }
+            Self::MovementStop { translation } => {
+                commands
+                    .entity(entity)
+                    .entry::<Transform>()
+                    .and_modify(move |mut pos| {
+                        pos.translation = Vec3::from_array(translation);
+                    });
+            }
         }
     }
 }

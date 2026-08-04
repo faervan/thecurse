@@ -15,6 +15,8 @@ const MOVEMENT_ANIMATION_SPEED: f32 = 1. + MOVEMENT_SPEED * 0.1;
 
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut udp: ResMut<Udp>,
     mut commands: Commands,
     query: Query<
         (
@@ -38,52 +40,41 @@ fn movement_input(
     camera: Single<&Transform, With<CameraController>>,
 ) {
     for (mut moving, aerial, attack, target, mut transform, mut velocity) in query {
-        let any_input =
-            input.any_pressed([KeyCode::KeyW, KeyCode::KeyA, KeyCode::KeyS, KeyCode::KeyD]);
-
-        if !any_input {
-            if moving.direction != Vec3::ZERO {
-                moving.direction = Vec3::ZERO;
-                velocity.x = 0.;
-                velocity.z = 0.;
-            }
-            return;
-        }
-
-        let mut dir = Vec3::ZERO;
+        let mut direction = Vec3::ZERO;
         if input.pressed(KeyCode::KeyW) {
-            dir.z -= 1.;
-        }
-        if input.pressed(KeyCode::KeyA) {
-            dir.x -= 1.;
+            direction.z -= 1.;
         }
         if input.pressed(KeyCode::KeyS) {
-            dir.z += 1.;
+            direction.z += 1.;
+        }
+        if input.pressed(KeyCode::KeyA) {
+            direction.x -= 1.;
         }
         if input.pressed(KeyCode::KeyD) {
-            dir.x += 1.;
+            direction.x += 1.;
         }
 
-        if dir == Vec3::ZERO || *attack != AttackState::None {
-            velocity.x = 0.;
-            velocity.z = 0.;
-            if moving.direction != Vec3::ZERO {
-                moving.direction = Vec3::ZERO;
+        if direction == Vec3::ZERO || *attack != AttackState::None {
+            if moving.base_direction != Vec3::ZERO {
+                moving.base_direction = Vec3::ZERO;
+                velocity.x = 0.;
+                velocity.z = 0.;
+                udp.write_action(PlayerAction::MovementStop {
+                    translation: transform.translation.to_array(),
+                });
+                moving.last_propagated_dir = None;
+                moving.propagation_timer.reset();
             }
-            return;
-        }
-
-        if *aerial != AerialState::Grounded {
-            dir *= AERIAL_MOVEMENT_FACTOR;
+            continue;
         }
 
         let past = transform.rotation;
         let forward =
             Quat::from_rotation_arc(Vec3::NEG_Z, camera.translation.with_y(0.).normalize());
         transform.rotation = forward;
-        transform.rotate_y((-dir.x).atan2(-dir.z));
+        transform.rotate_y((-direction.x).atan2(-direction.z));
 
-        if dir != moving.direction {
+        if direction != moving.base_direction {
             // Rotate the inner armature entity that is the root of the character mesh back to the
             // rotation the player had previously, then catch up smoothly.
             // Directly animating the character rotation would logically make more sense, but I
@@ -97,17 +88,30 @@ fn movement_input(
 
                 commands.entity(**target).transition(Quat::IDENTITY, 100);
             }
-            moving.direction = dir;
+            moving.base_direction = direction;
         }
 
-        dir = camera.rotation * dir.normalize() * MOVEMENT_SPEED;
+        direction = (camera.rotation * direction).with_y(0.).normalize() * MOVEMENT_SPEED;
 
         if *aerial != AerialState::Grounded {
-            dir *= AERIAL_MOVEMENT_FACTOR;
+            direction *= AERIAL_MOVEMENT_FACTOR;
         }
 
-        velocity.x = dir.x;
-        velocity.z = dir.z;
+        moving.propagation_timer.tick(time.delta());
+        if moving.propagation_timer.just_finished()
+            || moving
+                .last_propagated_dir
+                .is_none_or(|last| last.angle_between(direction) > PI / 12.)
+        {
+            udp.write_action(PlayerAction::Movement {
+                origin: transform.translation.to_array(),
+                direction: direction.to_array(),
+            });
+            moving.last_propagated_dir = Some(direction);
+        }
+
+        velocity.x = direction.x;
+        velocity.z = direction.z;
     }
 }
 
@@ -129,7 +133,7 @@ fn movement_changes(
             && *attack == AttackState::None
             && let Ok((mut transitions, mut player)) = players.get_mut(**target)
         {
-            if movement.direction == Vec3::ZERO {
+            if movement.base_direction == Vec3::ZERO {
                 transitions.play(&mut player, character.idle, Duration::from_millis(100));
             } else {
                 transitions
