@@ -7,6 +7,7 @@ use bevy::{
 
 mod client_store;
 mod clients;
+mod debug;
 mod handle_tcp;
 mod handle_udp;
 mod player;
@@ -38,6 +39,7 @@ fn main() -> AppExit {
     ));
 
     app.add_plugins((
+        debug::plugin,
         handle_tcp::plugin,
         handle_udp::plugin,
         clients::plugin,

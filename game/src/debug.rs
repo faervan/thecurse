@@ -7,6 +7,7 @@ use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
     WorldInspectorPlugin::debug_plugin(app);
+    CustomDiagnosticPlugin::debug_plugin(app);
     DebugPickingPlugin::debug_plugin(app);
     PhysicsDebugPlugin::debug_plugin(app);
     NavMeshDebug::debug_plugin(app);
@@ -82,6 +83,96 @@ impl DebugElement for WorldInspectorPlugin {
             app.add_plugins(EguiPlugin::default());
         }
         app.add_plugins(Self::default().run_if(in_state(DebugElementActive::<Self>::ACTIVE)));
+    }
+}
+
+#[derive(Resource, Default)]
+struct CustomDiagnosticPlugin {
+    updates: usize,
+    last_updates: usize,
+    updates_timer: Timer,
+    fixed_updates: usize,
+    last_fixed_updates: usize,
+    fixed_updates_timer: Timer,
+}
+
+#[derive(Component)]
+struct CustomDiagnosticUi;
+
+#[derive(Component)]
+struct CustomDiagnosticUiText;
+
+impl DebugElement for CustomDiagnosticPlugin {
+    const KEY: KeyCode = KeyCode::F2;
+
+    fn plugin(app: &mut App) {
+        app.insert_resource(Self {
+            updates_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
+            fixed_updates_timer: Timer::new(Duration::from_secs(1), TimerMode::Repeating),
+            ..Default::default()
+        });
+
+        app.add_systems(Update, update);
+        app.add_systems(FixedUpdate, fixed_update);
+
+        app.add_systems(
+            Update,
+            update_text.run_if(in_state(DebugElementActive::<Self>::ACTIVE)),
+        );
+    }
+
+    on_enable!(|mut commands: Commands| {
+        commands
+            .spawn((
+                CustomDiagnosticUi,
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(10.0),
+                    right: Val::Px(10.0),
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn((Text::new("Diagnostics"), CustomDiagnosticUiText));
+            });
+    });
+
+    on_disable!(
+        |mut commands: Commands, query: Query<Entity, With<CustomDiagnosticUi>>| {
+            for entity in query {
+                commands.entity(entity).despawn();
+            }
+        }
+    );
+}
+
+fn update_text(
+    diagnostic: Res<CustomDiagnosticPlugin>,
+    query: Query<&mut Text, With<CustomDiagnosticUiText>>,
+) {
+    for mut text in query {
+        text.0 = format!(
+            "Updates: {}Hz\nFixed Updates: {}Hz",
+            diagnostic.last_updates, diagnostic.last_fixed_updates
+        );
+    }
+}
+
+fn update(time: Res<Time>, mut diagnostic: ResMut<CustomDiagnosticPlugin>) {
+    diagnostic.updates += 1;
+    diagnostic.updates_timer.tick(time.delta());
+    if diagnostic.updates_timer.just_finished() {
+        diagnostic.last_updates = diagnostic.updates;
+        diagnostic.updates = 0;
+    }
+}
+
+fn fixed_update(time: Res<Time>, mut diagnostic: ResMut<CustomDiagnosticPlugin>) {
+    diagnostic.fixed_updates += 1;
+    diagnostic.fixed_updates_timer.tick(time.delta());
+    if diagnostic.fixed_updates_timer.just_finished() {
+        diagnostic.last_fixed_updates = diagnostic.fixed_updates;
+        diagnostic.fixed_updates = 0;
     }
 }
 
