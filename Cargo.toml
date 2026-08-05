@@ -21,7 +21,7 @@ avian3d = { version = "0.5", default-features = false, features = [
   "3d",
   "f32",
   "parry-f32",
-  "collider-from-mesh",
+  # "collider-from-mesh",
   "bevy_scene",
   "bevy_picking",
   "debug-plugin",

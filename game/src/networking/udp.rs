@@ -1,6 +1,6 @@
 use thecurse_core::{networking::UDP_ADDR, utils::wrapping::wrapping_le};
 
-use crate::prelude::*;
+use crate::{player::apply_action, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(AppState::Game), setup);
@@ -75,15 +75,23 @@ fn setup(mut commands: Commands) {
 
 fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut commands: Commands) {
     udp.recv_with(|msg| match msg {
-        UdpMsgToClient::Connected => {
+        UdpMsgToClient::Connected { translation } => {
             let Some(client_id) = con.client_id else {
                 error!("ClientId not initialized, not spawning player");
                 return;
             };
-            commands.spawn((MainCharacter, client_id));
+            commands.spawn((
+                MainCharacter,
+                client_id,
+                Transform::from_translation(Vec3::from_array(translation)),
+            ));
         }
-        UdpMsgToClient::PlayerConnected { id } => {
-            commands.spawn((Player, id));
+        UdpMsgToClient::PlayerConnected { id, translation } => {
+            commands.spawn((
+                Player,
+                id,
+                Transform::from_translation(Vec3::from_array(translation)),
+            ));
         }
         UdpMsgToClient::PlayerDisconnected { id } => {
             if let Some(entity) = con.clients.get(&id) {
@@ -95,7 +103,7 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
             client_id, action, ..
         } => {
             if let Some(entity) = con.clients.get(&client_id) {
-                action.apply(*entity, &mut commands);
+                apply_action(action, *entity, &mut commands);
             }
         }
     });

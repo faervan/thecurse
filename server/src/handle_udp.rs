@@ -1,6 +1,10 @@
 use thecurse_core::networking::UDP_ADDR;
 
-use crate::{clients::ConnectedClients, prelude::*};
+use crate::{
+    clients::ConnectedClients,
+    player::actions::{PlayerMovementQueue, apply_action},
+    prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<Udp>();
@@ -67,10 +71,14 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                             Name::new(format!("Player #{}", id.0)),
                             id,
                             ClientAddr(com.addr),
+                            Transform::from_translation(Vec3::Y),
+                            PlayerMovementQueue::default(),
                         ))
                         .id();
-                    clients.insert(id, u16::MAX, com.addr, entity);
-                    com.write_ordered(UdpMsgToClient::Connected);
+                    clients.insert(id, u16::MAX, com.addr, entity, Vec3::Y.to_array());
+                    com.write_ordered(UdpMsgToClient::Connected {
+                        translation: Vec3::Y.to_array()
+                    });
                 }
                 UdpMsgToServer::Disconnect => {
                     let entity = clients.remove(com.addr).unwrap();
@@ -82,17 +90,12 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                         PlayerAction::Attack { ty, .. } => {
                             debug!("attack! {id:?} does {ty:?}");
                         }
-                        PlayerAction::Movement { .. } => {
-                            clients.broadcast_action(id, action.clone());
-                            debug!("Player {id:?} moves");
-                        }
-                        PlayerAction::MovementStop { translation } => {
-                            clients.broadcast_action(id, action.clone());
-                            debug!("Player {id:?} stopped moving at {translation:?}");
+                        PlayerAction::Movement { origin, direction, destination, duration_secs } => {
+                            debug!("Player {id:?} moves for {duration_secs}s from {origin:?} to {destination:?} (direction: {direction:?})");
                         }
                     }
                     if let Some(entity) = clients.get_client_entity(&id) {
-                        action.apply(entity, &mut commands);
+                        apply_action(action, entity, &mut commands);
                     }
                 }
             }

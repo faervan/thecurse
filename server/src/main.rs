@@ -3,6 +3,7 @@ use bevy::{
     app::{PanicHandlerPlugin, TerminalCtrlCHandlerPlugin},
     ecs::schedule::ScheduleLabel,
     log::LogPlugin,
+    scene::ScenePlugin,
 };
 
 mod client_store;
@@ -22,20 +23,46 @@ fn main() -> AppExit {
 
     app.add_schedule(Schedule::new(ServerBroadcast));
 
-    app.add_systems(FixedLast, |world: &mut World, mut run: Local<bool>| {
-        *run = !*run;
-        // Fixed timestep is 40Hz, run ServerBroadcast at 20 Hz
-        if *run {
+    app.add_systems(FixedLast, |world: &mut World, mut run: Local<u8>| {
+        *run += 1;
+        // Fixed timestep is 64Hz, run ServerBroadcast at 16 Hz
+        if *run == 4 {
+            *run = 0;
             world.run_schedule(ServerBroadcast);
         }
     });
 
+    // Bevy basic plugins
     app.add_plugins((
         MinimalPlugins,
         PanicHandlerPlugin,
         LogPlugin::default(),
         TransformPlugin,
         TerminalCtrlCHandlerPlugin,
+        AssetPlugin::default(),
+        ScenePlugin,
+    ));
+
+    // Avian plugins
+    app.add_plugins((
+        PhysicsSchedulePlugin::default(),
+        ColliderBackendPlugin::<Collider>::default(),
+        ColliderHierarchyPlugin,
+        ColliderTransformPlugin::default(),
+        // since avian 0.6
+        // ColliderTreePlugin
+        BroadPhasePlugin::<()>::default(),
+        // since avian 0.6
+        // BvhBroadPhasePlugin
+        NarrowPhasePlugin::<Collider>::default(),
+        SolverPlugins::default(),
+        JointPlugin,
+        MassPropertyPlugin::default(),
+        ForcePlugin,
+        // Not needed on server?
+        // SpatialQueryPlugin,
+        PhysicsInterpolationPlugin::default(),
+        PhysicsTransformPlugin::default(),
     ));
 
     app.add_plugins((
@@ -45,8 +72,6 @@ fn main() -> AppExit {
         clients::plugin,
         player::plugin,
     ));
-
-    app.insert_resource(Time::<Fixed>::from_hz(40.));
 
     app.run()
 }

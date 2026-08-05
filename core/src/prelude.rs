@@ -2,7 +2,7 @@ pub use std::collections::VecDeque;
 pub use std::f32::consts::{PI, TAU};
 pub use std::marker::PhantomData;
 pub use std::ops::{Deref, DerefMut};
-pub use std::time::Duration;
+pub use std::time::{Duration, Instant};
 
 pub use rand;
 pub use thiserror::Error;
@@ -33,7 +33,7 @@ pub use crate::creatures::behavior::*;
 pub use crate::creatures::crowd_control::*;
 pub use crate::creatures::goblin::Goblin;
 pub use crate::creatures::health::*;
-pub use crate::creatures::player::{MainCharacter, Player, PlayerAction};
+pub use crate::creatures::player::{MainCharacter, Player, PlayerAction, PlayerActionBroadcast};
 pub use crate::creatures::{Creature, IsCreature};
 
 pub use crate::environment::*;

@@ -19,7 +19,7 @@ fn broadcast_attack(
         {
             udp.clients.broadcast_action(
                 *id,
-                PlayerAction::Attack {
+                PlayerActionBroadcast::Attack {
                     ty: *ty,
                     translation: pos.translation.to_array(),
                     rotation: pos.rotation.to_array(),

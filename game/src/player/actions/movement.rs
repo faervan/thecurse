@@ -6,7 +6,7 @@ use crate::{player::PlayerCharacterHandle, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
-        Update,
+        FixedUpdate,
         (movement_input, movement_changes.after(movement_input)).run_if(in_state(AppState::Game)),
     );
 }
@@ -59,10 +59,15 @@ fn movement_input(
                 moving.base_direction = Vec3::ZERO;
                 velocity.x = 0.;
                 velocity.z = 0.;
-                udp.write_action(PlayerAction::MovementStop {
-                    translation: transform.translation.to_array(),
+                moving.propagation_timer.tick(time.delta());
+                udp.write_action(PlayerAction::Movement {
+                    origin: moving.last_pos.xz().to_array(),
+                    direction: moving.last_propagated_dir.unwrap().to_array(),
+                    destination: transform.translation.xz().to_array(),
+                    duration_secs: moving.propagation_timer.elapsed_secs(),
                 });
                 moving.last_propagated_dir = None;
+                moving.last_pos = transform.translation;
                 moving.propagation_timer.reset();
             }
             continue;
@@ -93,6 +98,10 @@ fn movement_input(
 
         direction = (camera.rotation * direction).with_y(0.).normalize() * MOVEMENT_SPEED;
 
+        if moving.last_propagated_dir.is_none() {
+            moving.last_propagated_dir = Some(direction.xz());
+        }
+
         if *aerial != AerialState::Grounded {
             direction *= AERIAL_MOVEMENT_FACTOR;
         }
@@ -101,13 +110,17 @@ fn movement_input(
         if moving.propagation_timer.just_finished()
             || moving
                 .last_propagated_dir
-                .is_none_or(|last| last.angle_between(direction) > PI / 12.)
+                // Send update direction changed by at least 7.5°
+                .is_some_and(|last| last.angle_to(direction.xz()).abs() > PI / 24.)
         {
             udp.write_action(PlayerAction::Movement {
-                origin: transform.translation.to_array(),
-                direction: direction.to_array(),
+                origin: moving.last_pos.xz().to_array(),
+                direction: direction.xz().to_array(),
+                destination: transform.translation.xz().to_array(),
+                duration_secs: moving.propagation_timer.elapsed_secs(),
             });
-            moving.last_propagated_dir = Some(direction);
+            moving.last_propagated_dir = Some(direction.xz());
+            moving.last_pos = transform.translation;
         }
 
         velocity.x = direction.x;

@@ -9,13 +9,6 @@ pub use movement::*;
 mod aerial;
 pub use aerial::*;
 
-#[derive(Bundle, Default)]
-pub struct CharacterActions {
-    pub aerial: AerialState,
-    pub movement: MovementState,
-    pub attack: AttackState,
-}
-
 #[derive(ByteRepr, Debug, Clone)]
 pub enum PlayerAction {
     Attack {
@@ -24,51 +17,22 @@ pub enum PlayerAction {
         rotation: [f32; 4],
     },
     Movement {
-        origin: [f32; 3],
-        direction: [f32; 3],
-    },
-    MovementStop {
-        translation: [f32; 3],
+        origin: [f32; 2],
+        direction: [f32; 2],
+        destination: [f32; 2],
+        duration_secs: f32,
     },
 }
 
-impl PlayerAction {
-    pub fn apply(self, entity: Entity, commands: &mut Commands) {
-        match self {
-            Self::Attack {
-                ty,
-                translation,
-                rotation,
-            } => {
-                commands
-                    .entity(entity)
-                    .insert(AttackState::Attacking {
-                        timer: Timer::new(ty.duration(), TimerMode::Once),
-                        ty,
-                    })
-                    .entry::<Transform>()
-                    .and_modify(move |mut pos| {
-                        pos.translation = Vec3::from_array(translation);
-                        pos.rotation = Quat::from_array(rotation)
-                    });
-            }
-            Self::Movement { origin, direction } => {
-                commands
-                    .entity(entity)
-                    .entry::<Transform>()
-                    .and_modify(move |mut pos| {
-                        pos.translation = Vec3::from_array(origin);
-                        pos.look_to(-Vec3::from_array(direction), Vec3::Y);
-                    });
-            }
-            Self::MovementStop { translation } => {
-                commands
-                    .entity(entity)
-                    .entry::<Transform>()
-                    .and_modify(move |mut pos| {
-                        pos.translation = Vec3::from_array(translation);
-                    });
-            }
-        }
-    }
+#[derive(ByteRepr, Debug, Clone)]
+pub enum PlayerActionBroadcast {
+    Attack {
+        ty: AttackType,
+        translation: [f32; 3],
+        rotation: [f32; 4],
+    },
+    Movement {
+        destination: [f32; 3],
+        duration_secs: f32,
+    },
 }

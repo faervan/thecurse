@@ -7,7 +7,7 @@ pub struct ConnectedClients {
     client_entities: HashMap<ClientId, Entity>,
     addr_clients: HashMap<SocketAddr, ConnectedClient>,
     client_addrs: HashMap<ClientId, SocketAddr>,
-    pending_action_broadcasts: Vec<(ClientId, PlayerAction)>,
+    pending_action_broadcasts: Vec<(ClientId, PlayerActionBroadcast)>,
 }
 
 struct ConnectedClient {
@@ -23,6 +23,7 @@ impl ConnectedClients {
         last_processed_action: u16,
         addr: SocketAddr,
         entity: Entity,
+        translation: [f32; 3],
     ) {
         self.client_entities.insert(id, entity);
         self.client_addrs.insert(id, addr);
@@ -40,11 +41,11 @@ impl ConnectedClients {
             .for_each(|(_, client)| {
                 client
                     .pending_messages
-                    .push_back(UdpMsgToClient::PlayerConnected { id })
+                    .push_back(UdpMsgToClient::PlayerConnected { id, translation })
             });
     }
 
-    pub fn broadcast_action(&mut self, client_id: ClientId, action: PlayerAction) {
+    pub fn broadcast_action(&mut self, client_id: ClientId, action: PlayerActionBroadcast) {
         self.pending_action_broadcasts.push((client_id, action));
     }
 
@@ -53,6 +54,7 @@ impl ConnectedClients {
         last_processed_msg: u16,
         addr: &SocketAddr,
     ) -> Option<ClientId> {
+        debug_assert!(self.addr_clients.contains_key(addr));
         self.addr_clients.get_mut(addr).map(|client| {
             client.last_processed_action = last_processed_msg;
             client.id

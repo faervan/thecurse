@@ -10,7 +10,7 @@ pub struct Player;
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-#[require(Player)]
+#[require(Player, AerialState, MovementState, AttackState)]
 pub struct MainCharacter;
 
 impl IsCreature for Player {
@@ -20,10 +20,6 @@ impl IsCreature for Player {
 
     fn collider() -> Collider {
         Collider::cuboid(0.5, 1.94, 0.2)
-    }
-
-    fn bundle() -> impl Bundle {
-        CharacterActions::default()
     }
 
     fn on_add_hook(mut world: DeferredWorld, this: Entity) {

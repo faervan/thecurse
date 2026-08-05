@@ -1,6 +1,8 @@
 use crate::prelude::*;
 
 mod actions;
+pub use actions::apply_action;
+
 mod asset_loading;
 pub mod cursor_target;
 mod inventory;

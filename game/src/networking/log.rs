@@ -1,4 +1,4 @@
-use bevy::scene::serde::SceneDeserializer;
+use bevy::scene::{SceneInstanceReady, serde::SceneDeserializer};
 use serde::de::DeserializeSeed;
 
 use crate::prelude::*;
@@ -58,7 +58,18 @@ fn read_server_messages(
                             Ok(scene) => {
                                 info!("success!");
                                 let scene = scenes.add(scene);
-                                commands.spawn(DynamicSceneRoot(scene));
+                                commands.spawn(DynamicSceneRoot(scene)).observe(
+                                    |_event: On<SceneInstanceReady>,
+                                     mut commands: Commands,
+                                     query: Query<
+                                        Entity,
+                                        (With<Player>, Without<MainCharacter>),
+                                    >| {
+                                        for entity in query {
+                                            commands.entity(entity).insert(RigidBody::Kinematic);
+                                        }
+                                    },
+                                );
                             }
                             Err(e) => error!("Scene deserialization failed: {e}"),
                         }

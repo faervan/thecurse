@@ -13,9 +13,12 @@ pub enum UdpMsgToServer {
 
 #[derive(ByteRepr, Debug, Clone)]
 pub enum UdpMsgToClient {
-    Connected,
+    Connected {
+        translation: [f32; 3],
+    },
     PlayerConnected {
         id: ClientId,
+        translation: [f32; 3],
     },
     PlayerDisconnected {
         id: ClientId,
@@ -25,6 +28,6 @@ pub enum UdpMsgToClient {
         /// The id of the last [UdpMsgToServer] sent by the client that was processed by the server at
         /// the time this [UdpMsgToClient] was constructed.
         last_processed_action: u16,
-        action: PlayerAction,
+        action: PlayerActionBroadcast,
     },
 }
