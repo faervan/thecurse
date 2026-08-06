@@ -61,7 +61,8 @@ async fn handle_tcp(
         pin!(to_server);
         select! {
             result = from_server => {
-                if result.is_err() {
+                if let Err(e) = result {
+                    error!("Failed to read message from server: {e}");
                     break;
                 }
                 let msg = match TcpMsgToClient::read_from_with_len(&mut stream, &len_buf, &mut buf).await {

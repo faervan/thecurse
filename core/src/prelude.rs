@@ -19,6 +19,7 @@ pub use bevy::prelude::*;
 pub use vleue_navigator::prelude::*;
 
 pub use mini_udp::prelude::*;
+pub use mini_udp::ring_buffer::RingBuffer;
 
 pub use crate::animation::AnimationExt as _;
 pub use crate::assets::AssetResourceLoader as _;

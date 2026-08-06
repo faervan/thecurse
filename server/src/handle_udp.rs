@@ -22,7 +22,10 @@ pub struct Udp {
 impl Default for Udp {
     fn default() -> Self {
         Self {
-            inner: MultiUdpCommunicator::bind(UDP_ADDR).with_fake_unreliablity(),
+            inner: MultiUdpCommunicator::bind(UDP_ADDR)
+                .with_fake_delay(20..25)
+                .with_fake_drop(0.05)
+                .with_fake_corruption(0.01),
             clients: ConnectedClients::default(),
         }
     }
@@ -62,9 +65,9 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
     let (com, clients) = udp.borrow_mut();
     com.recv(|mut com: UdpCommunicatorMut<_, _>| {
         while let Some(msg) = com.read_ordered() {
-            debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
             match msg {
                 UdpMsgToServer::Connect(id) => {
+                    debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
                     let entity = commands
                         .spawn((
                             Player,
@@ -81,9 +84,12 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                     });
                 }
                 UdpMsgToServer::Disconnect => {
-                    let entity = clients.remove(com.addr).unwrap();
-                    commands.entity(entity).despawn();
+                    debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
+                    if let Some(entity) = clients.remove(com.addr) {
+                        commands.entity(entity).despawn();
+                    }
                 }
+                UdpMsgToServer::Ping { id } => com.write_ordered(UdpMsgToClient::Ping { id }),
                 UdpMsgToServer::Action { id, action } => {
                     let id = clients.update_last_msg(id, &com.addr).unwrap();
                     match action {

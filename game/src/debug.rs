@@ -148,12 +148,16 @@ impl DebugElement for CustomDiagnosticPlugin {
 
 fn update_text(
     diagnostic: Res<CustomDiagnosticPlugin>,
+    udp: Res<Udp>,
     query: Query<&mut Text, With<CustomDiagnosticUiText>>,
 ) {
     for mut text in query {
         text.0 = format!(
-            "Updates: {}Hz\nFixed Updates: {}Hz",
-            diagnostic.last_updates, diagnostic.last_fixed_updates
+            "Updates: {}Hz\nFixed Updates: {}Hz\nPing: {}ms",
+            diagnostic.last_updates,
+            diagnostic.last_fixed_updates,
+            udp.last_pings.values().map(|d| d.as_millis()).sum::<u128>()
+                / udp.last_pings.len() as u128
         );
     }
 }

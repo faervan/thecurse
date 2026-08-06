@@ -17,8 +17,11 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-#[derive(Component, Reflect, Debug)]
+#[derive(Component, Reflect, Default, Debug, Deref, DerefMut)]
 #[reflect(Component)]
+struct ScriptedPlayerMovementQueue(VecDeque<ScriptedPlayerMovement>);
+
+#[derive(Reflect, Debug)]
 struct ScriptedPlayerMovement {
     destination: Vec3,
     origin: Option<Vec3>,
@@ -56,11 +59,17 @@ pub fn apply_action(action: PlayerActionBroadcast, entity: Entity, commands: &mu
             let destination = Vec3::from_array(destination);
             commands
                 .entity(entity)
-                .insert(ScriptedPlayerMovement {
-                    destination,
-                    origin: None,
-                    timer: Timer::new(Duration::from_secs_f32(duration_secs), TimerMode::Once),
+                .entry::<ScriptedPlayerMovementQueue>()
+                // TODO! Insert it before
+                .or_default()
+                .and_modify(move |mut queue| {
+                    queue.push_back(ScriptedPlayerMovement {
+                        destination,
+                        origin: None,
+                        timer: Timer::new(Duration::from_secs_f32(duration_secs), TimerMode::Once),
+                    })
                 })
+                .entity()
                 .entry::<Transform>()
                 .and_modify(move |mut pos| {
                     let dir = pos.translation - destination;
@@ -71,22 +80,33 @@ pub fn apply_action(action: PlayerActionBroadcast, entity: Entity, commands: &mu
 }
 
 fn drive_scripted_player_movement(
-    mut commands: Commands,
     time: Res<Time>,
-    query: Query<(Entity, &mut ScriptedPlayerMovement, &mut Transform)>,
+    query: Query<(&mut ScriptedPlayerMovementQueue, &mut Transform)>,
 ) {
-    for (entity, mut movement, mut pos) in query {
-        let origin = match movement.origin {
-            Some(p) => p,
-            None => {
-                movement.origin = Some(pos.translation);
-                pos.translation
+    for (mut queue, mut pos) in query {
+        if queue.len() > 2 {
+            debug!("{} movement events in queue", queue.len());
+        }
+        let mut overshoot = Duration::ZERO;
+        while let Some(movement) = queue.get_mut(0) {
+            movement.timer.tick(overshoot);
+            let origin = match movement.origin {
+                Some(p) => p,
+                None => {
+                    movement.origin = Some(pos.translation);
+                    pos.translation
+                }
+            };
+            if movement.timer.remaining() < time.delta() {
+                overshoot = time.delta() - movement.timer.remaining();
             }
-        };
-        movement.timer.tick(time.delta());
-        pos.translation = origin + (movement.destination - origin) * movement.timer.fraction();
-        if movement.timer.is_finished() {
-            commands.entity(entity).remove::<ScriptedPlayerMovement>();
+            movement.timer.tick(time.delta());
+            pos.translation = origin + (movement.destination - origin) * movement.timer.fraction();
+            if movement.timer.is_finished() {
+                queue.pop_front();
+                continue;
+            }
+            break;
         }
     }
 }

@@ -18,7 +18,7 @@ pub fn plugin(app: &mut App) {
     app.add_systems(FixedLast, movement_simulation);
 }
 
-const MAX_MOVEMENT_INACCURACY: f32 = 0.1;
+const MAX_MOVEMENT_INACCURACY: f32 = 0.05;
 
 fn movement_simulation(
     mut udp: ResMut<Udp>,

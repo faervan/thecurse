@@ -3,16 +3,42 @@ use thecurse_core::{networking::UDP_ADDR, utils::wrapping::wrapping_le};
 use crate::{player::apply_action, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(AppState::Game), setup);
+    app.add_systems(OnEnter(AppState::Game), |mut commands: Commands| {
+        commands.insert_resource(Udp::default())
+    });
 
-    app.add_systems(Update, read_udp_messages.run_if(in_state(AppState::Game)));
+    app.add_systems(
+        Update,
+        (read_udp_messages, send_ping).run_if(in_state(AppState::Game)),
+    );
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct Udp {
     next_id: u16,
     action_cache: VecDeque<(u16, PlayerAction)>,
     com: UdpCommunicator<UdpMsgToServer, UdpMsgToClient>,
+    next_ping_id: u16,
+    pub last_pings: RingBuffer<Duration, 4>,
+    pending_pings: VecDeque<(u16, Instant)>,
+}
+
+impl Default for Udp {
+    fn default() -> Self {
+        let mut com = UdpCommunicator::default()
+            .with_fake_delay(35..45)
+            .with_fake_drop(0.05)
+            .with_fake_corruption(0.01);
+        com.connect(UDP_ADDR).unwrap();
+        Self {
+            next_id: 0,
+            action_cache: VecDeque::new(),
+            com,
+            next_ping_id: 0,
+            last_pings: RingBuffer::new(),
+            pending_pings: VecDeque::new(),
+        }
+    }
 }
 
 impl Udp {
@@ -44,7 +70,6 @@ impl Udp {
     {
         self.com.recv();
         while let Some(msg) = self.com.read_ordered() {
-            debug!("Received msg via UDP: {msg:?}");
             if let UdpMsgToClient::PlayerAction {
                 last_processed_action,
                 ..
@@ -67,15 +92,11 @@ impl Udp {
     }
 }
 
-fn setup(mut commands: Commands) {
-    let mut udp = Udp::default();
-    udp.com.connect(UDP_ADDR).unwrap();
-    commands.insert_resource(udp);
-}
-
 fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut commands: Commands) {
+    let mut ping_ids = vec![];
     udp.recv_with(|msg| match msg {
         UdpMsgToClient::Connected { translation } => {
+            debug!("Received msg via UDP: {msg:?}");
             let Some(client_id) = con.client_id else {
                 error!("ClientId not initialized, not spawning player");
                 return;
@@ -87,6 +108,7 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
             ));
         }
         UdpMsgToClient::PlayerConnected { id, translation } => {
+            debug!("Received msg via UDP: {msg:?}");
             commands.spawn((
                 Player,
                 id,
@@ -94,18 +116,44 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
             ));
         }
         UdpMsgToClient::PlayerDisconnected { id } => {
+            debug!("Received msg via UDP: {msg:?}");
             if let Some(entity) = con.clients.get(&id) {
                 debug!("Despawning player #{id:?} ({entity})");
                 commands.entity(*entity).despawn();
             }
         }
+        UdpMsgToClient::Ping { id } => ping_ids.push(id),
+
         UdpMsgToClient::PlayerAction {
             client_id, action, ..
         } => {
+            debug!("Received action by {client_id:?}: {action:?}");
             if let Some(entity) = con.clients.get(&client_id) {
                 apply_action(action, *entity, &mut commands);
             }
         }
     });
+    for ping_id in ping_ids {
+        if let Some((id, start)) = udp.pending_pings.pop_front()
+            && id == ping_id
+        {
+            udp.last_pings.push(start.elapsed());
+        } else {
+            warn!("Received invalid ping id: {ping_id}");
+        }
+    }
     udp.send();
+}
+
+fn send_ping(mut udp: ResMut<Udp>, time: Res<Time>, mut timer: Local<Timer>) {
+    if timer.duration().is_zero() {
+        *timer = Timer::new(Duration::from_millis(100), TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
+    if timer.just_finished() {
+        let id = udp.next_ping_id;
+        udp.pending_pings.push_back((id, Instant::now()));
+        udp.next_ping_id = udp.next_ping_id.wrapping_add(1);
+        udp.write(UdpMsgToServer::Ping { id });
+    }
 }

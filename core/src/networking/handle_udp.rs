@@ -8,6 +8,7 @@ pub const UDP_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0
 pub enum UdpMsgToServer {
     Connect(ClientId),
     Disconnect,
+    Ping { id: u16 },
     Action { id: u16, action: PlayerAction },
 }
 
@@ -22,6 +23,9 @@ pub enum UdpMsgToClient {
     },
     PlayerDisconnected {
         id: ClientId,
+    },
+    Ping {
+        id: u16,
     },
     PlayerAction {
         client_id: ClientId,
