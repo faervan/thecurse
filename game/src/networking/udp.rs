@@ -25,15 +25,16 @@ pub struct Udp {
 
 impl Default for Udp {
     fn default() -> Self {
-        let mut com = UdpCommunicator::default()
-            .with_fake_delay(35..45)
-            .with_fake_drop(0.05)
-            .with_fake_corruption(0.01);
-        com.connect(UDP_ADDR).unwrap();
         Self {
             next_id: 0,
             action_cache: VecDeque::new(),
-            com,
+            com: UdpCommunicator::default()
+                .connect(UDP_ADDR)
+                .unwrap()
+                .with_reliable_ordered_resend_interval(Duration::from_millis(50))
+                .with_fake_delay(35..45)
+                .with_fake_drop(0.05)
+                .with_fake_corruption(0.01),
             next_ping_id: 0,
             last_pings: RingBuffer::new(),
             pending_pings: VecDeque::new(),

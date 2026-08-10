@@ -4421,7 +4421,9 @@ dependencies = [
 
 [[package]]
 name = "mini_udp"
-version = "0.1.0"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "448114a51d524c79d61a6291e9ed6eb9a8f118e4bc8312b573790b3d904f5f34"
 dependencies = [
  "crc",
  "mini_udp_derive",
@@ -4433,7 +4435,9 @@ dependencies = [
 
 [[package]]
 name = "mini_udp_derive"
-version = "0.1.0"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "839942ec15b34e039e28dedab12956a8a14b057f60fe9310d246076ed6ebdaf1"
 dependencies = [
  "enum-assoc",
  "proc-macro2",
