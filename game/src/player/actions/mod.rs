@@ -1,4 +1,4 @@
-use thecurse_core::creatures::player::AttackState;
+use thecurse_core::{creatures::player::AttackState, utils::wrapping::wrapping_le};
 
 use crate::prelude::*;
 
@@ -13,19 +13,48 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
+        add_player_puppet_components.run_if(in_state(AppState::Game)),
+    );
+
+    app.add_systems(
+        Update,
         drive_scripted_player_movement.run_if(in_state(AppState::Game)),
     );
 }
 
-#[derive(Component, Reflect, Default, Debug, Deref, DerefMut)]
+#[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
-struct ScriptedPlayerMovementQueue(VecDeque<ScriptedPlayerMovement>);
+struct ScriptedPlayerMovementQueue {
+    last_pos: Vec3,
+    next_pos: Option<Vec3>,
+    /// Measures the time of the current movement replication
+    movement_timer: Timer,
+    last_server_tick_id: u16,
+    pending: VecDeque<ScriptedPlayerMovement>,
+    smoothness_delay: Timer,
+}
+
+impl Default for ScriptedPlayerMovementQueue {
+    fn default() -> Self {
+        Self {
+            last_pos: Vec3::ZERO,
+            next_pos: None,
+            movement_timer: Timer::new(Duration::ZERO, TimerMode::Once),
+            last_server_tick_id: u16::MAX,
+            pending: VecDeque::new(),
+            smoothness_delay: {
+                let mut timer = Timer::new(Duration::from_millis(50), TimerMode::Once);
+                timer.finish();
+                timer
+            },
+        }
+    }
+}
 
 #[derive(Reflect, Debug)]
 struct ScriptedPlayerMovement {
+    server_ticks: u16,
     destination: Vec3,
-    origin: Option<Vec3>,
-    timer: Timer,
 }
 
 #[derive(Message, Debug)]
@@ -33,7 +62,24 @@ pub enum InterruptAction {
     PlayerJumped,
 }
 
-pub fn apply_action(action: PlayerActionBroadcast, entity: Entity, commands: &mut Commands) {
+fn add_player_puppet_components(
+    mut commands: Commands,
+    query: Query<(Entity, &Transform), (Added<Player>, Without<MainCharacter>)>,
+) {
+    for (entity, pos) in query {
+        commands.entity(entity).insert(ScriptedPlayerMovementQueue {
+            last_pos: pos.translation,
+            ..Default::default()
+        });
+    }
+}
+
+pub fn apply_action(
+    action: PlayerActionBroadcast,
+    server_broadcast_tick_id: u16,
+    entity: Entity,
+    commands: &mut Commands,
+) {
     match action {
         PlayerActionBroadcast::Attack {
             ty,
@@ -54,26 +100,37 @@ pub fn apply_action(action: PlayerActionBroadcast, entity: Entity, commands: &mu
         }
         PlayerActionBroadcast::Movement {
             destination,
-            duration_secs,
+            just_started,
         } => {
-            let destination = Vec3::from_array(destination);
             commands
                 .entity(entity)
                 .entry::<ScriptedPlayerMovementQueue>()
-                // TODO! Insert it before
-                .or_default()
                 .and_modify(move |mut queue| {
-                    queue.push_back(ScriptedPlayerMovement {
+                    if wrapping_le(server_broadcast_tick_id, queue.last_server_tick_id) {
+                        warn!(
+                            "Movement event with id {server_broadcast_tick_id} took too \
+                            long (last processed is {})",
+                            queue.last_server_tick_id
+                        );
+                        return;
+                    }
+                    let server_ticks = match just_started {
+                        true => 1,
+                        false => server_broadcast_tick_id.wrapping_sub(queue.last_server_tick_id),
+                    };
+                    if server_ticks > 1 {
+                        warn!("Processing {server_ticks} server ticks for movement at once");
+                    }
+                    queue.last_server_tick_id = server_broadcast_tick_id;
+
+                    let destination = Vec3::from_array(destination);
+                    if queue.pending.is_empty() && queue.next_pos.is_none() {
+                        queue.smoothness_delay.reset();
+                    }
+                    queue.pending.push_back(ScriptedPlayerMovement {
+                        server_ticks,
                         destination,
-                        origin: None,
-                        timer: Timer::new(Duration::from_secs_f32(duration_secs), TimerMode::Once),
-                    })
-                })
-                .entity()
-                .entry::<Transform>()
-                .and_modify(move |mut pos| {
-                    let dir = pos.translation - destination;
-                    pos.look_to(dir.with_y(0.), Vec3::Y);
+                    });
                 });
         }
     }
@@ -84,29 +141,35 @@ fn drive_scripted_player_movement(
     query: Query<(&mut ScriptedPlayerMovementQueue, &mut Transform)>,
 ) {
     for (mut queue, mut pos) in query {
-        if queue.len() > 2 {
-            debug!("{} movement events in queue", queue.len());
+        if !queue.smoothness_delay.is_finished() {
+            queue.smoothness_delay.tick(time.delta());
+            continue;
         }
-        let mut overshoot = Duration::ZERO;
-        while let Some(movement) = queue.get_mut(0) {
-            movement.timer.tick(overshoot);
-            let origin = match movement.origin {
-                Some(p) => p,
-                None => {
-                    movement.origin = Some(pos.translation);
-                    pos.translation
-                }
-            };
-            if movement.timer.remaining() < time.delta() {
-                overshoot = time.delta() - movement.timer.remaining();
-            }
-            movement.timer.tick(time.delta());
-            pos.translation = origin + (movement.destination - origin) * movement.timer.fraction();
-            if movement.timer.is_finished() {
-                queue.pop_front();
+
+        if let Some(next_pos) = queue.next_pos {
+            queue.movement_timer.tick(time.delta());
+            let fraction = queue.movement_timer.fraction();
+
+            pos.translation = queue.last_pos.lerp(next_pos, fraction);
+
+            if queue.movement_timer.just_finished() {
+                queue.last_pos = next_pos;
+                queue.next_pos = None;
+            } else {
                 continue;
             }
-            break;
+        }
+
+        if let Some(ScriptedPlayerMovement {
+            server_ticks,
+            destination,
+        }) = queue.pending.pop_front()
+        {
+            queue
+                .movement_timer
+                .set_duration(SERVER_TIMESTEP * 4 / server_ticks as u32);
+            queue.movement_timer.reset();
+            queue.next_pos = Some(destination);
         }
     }
 }

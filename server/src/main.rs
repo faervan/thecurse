@@ -18,10 +18,16 @@ mod scene;
 #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ServerBroadcast;
 
+#[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct AfterServerBroadcast;
+
 fn main() -> AppExit {
     let mut app = App::new();
 
     app.add_schedule(Schedule::new(ServerBroadcast));
+    app.add_schedule(Schedule::new(AfterServerBroadcast));
+
+    app.insert_resource(Time::<Fixed>::from_duration(SERVER_TIMESTEP));
 
     app.add_systems(FixedLast, |world: &mut World, mut run: Local<u8>| {
         *run += 1;
@@ -29,6 +35,7 @@ fn main() -> AppExit {
         if *run == 4 {
             *run = 0;
             world.run_schedule(ServerBroadcast);
+            world.run_schedule(AfterServerBroadcast);
         }
     });
 

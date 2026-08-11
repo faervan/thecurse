@@ -3,7 +3,11 @@ use io_util::TheCurseReadWriteExt;
 
 mod handle_udp;
 pub use handle_udp::{UDP_ADDR, UdpMsgToClient, UdpMsgToServer};
+
 pub mod io_util;
+
+pub const PROTOCOL_VERSION: u32 = 0;
+pub const SERVER_TIMESTEP: Duration = Duration::from_micros(15625);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TcpMsgToServer {

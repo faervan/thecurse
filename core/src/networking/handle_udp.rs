@@ -32,6 +32,7 @@ pub enum UdpMsgToClient {
         /// The id of the last [UdpMsgToServer] sent by the client that was processed by the server at
         /// the time this [UdpMsgToClient] was constructed.
         last_processed_action: u16,
+        server_broadcast_tick_id: u16,
         action: PlayerActionBroadcast,
     },
 }

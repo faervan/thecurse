@@ -42,6 +42,6 @@ pub use crate::environment::*;
 pub use crate::spells::SpawnSpellVoid;
 
 pub use crate::networking::{
-    ClientId, TcpMsgToClient, TcpMsgToServer, UdpMsgToClient, UdpMsgToServer,
-    io_util::TheCurseReadWriteExt as _,
+    ClientId, PROTOCOL_VERSION, SERVER_TIMESTEP, TcpMsgToClient, TcpMsgToServer, UdpMsgToClient,
+    UdpMsgToServer, io_util::TheCurseReadWriteExt as _,
 };

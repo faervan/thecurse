@@ -4421,23 +4421,22 @@ dependencies = [
 
 [[package]]
 name = "mini_udp"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "448114a51d524c79d61a6291e9ed6eb9a8f118e4bc8312b573790b3d904f5f34"
+checksum = "213bde9dafcfca4b7ebe4d0ef4b6ae32528784d4ac95b93bc852c41cd789affc"
 dependencies = [
  "crc",
  "mini_udp_derive",
  "rand 0.10.2",
- "ringbuffer",
  "thiserror 2.0.19",
  "tracing",
 ]
 
 [[package]]
 name = "mini_udp_derive"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "839942ec15b34e039e28dedab12956a8a14b057f60fe9310d246076ed6ebdaf1"
+checksum = "c6d8c501450b02bbfc9b3147ef0632d7aa6a9513b78fbe1911c9982731309fb0"
 dependencies = [
  "enum-assoc",
  "proc-macro2",
@@ -5818,12 +5817,6 @@ dependencies = [
  "thiserror 2.0.19",
  "tracing",
 ]
-
-[[package]]
-name = "ringbuffer"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57b0b88a509053cbfd535726dcaaceee631313cef981266119527a1d110f6d2b"
 
 [[package]]
 name = "robust"

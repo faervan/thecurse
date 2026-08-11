@@ -9,43 +9,59 @@ use crate::{
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<Udp>();
 
-    app.add_systems(ServerBroadcast, read_udp);
+    app.add_systems(crate::AfterServerBroadcast, read_udp);
 }
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct Udp {
     #[deref]
-    inner: MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
+    inner: MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer, PROTOCOL_VERSION>,
     pub clients: ConnectedClients,
+    server_broadcast_tick_id: u16,
 }
 
 impl Default for Udp {
     fn default() -> Self {
         Self {
-            inner: MultiUdpCommunicator::bind(UDP_ADDR)
-                .with_fake_delay(20..25)
-                .with_fake_drop(0.05)
-                .with_fake_corruption(0.01),
+            inner: {
+                let mut com = MultiUdpCommunicator::bind(UDP_ADDR);
+                #[cfg(debug_assertions)]
+                {
+                    com = com
+                        .with_fake_delay(20..25)
+                        .with_fake_drop(0.05)
+                        .with_fake_corruption(0.01);
+                }
+                // This is basically an arbitrary low interval, it is extended to
+                // `SERVER_TIMESTEP / 4` anyway, because that's the frequency at which the `send`
+                // method is called.
+                com = com.with_reliable_ordered_resend_interval(SERVER_TIMESTEP);
+                com = com.with_reliable_unordered_resend_interval(SERVER_TIMESTEP);
+                com
+            },
             clients: ConnectedClients::default(),
+            server_broadcast_tick_id: 0,
         }
     }
 }
 
 impl Udp {
-    pub fn flush_pending_messages(&mut self) {
-        self.clients.flush_pending_messages(&mut self.inner);
-    }
-
     pub fn borrow_mut(
         &mut self,
     ) -> (
-        &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
+        &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer, PROTOCOL_VERSION>,
         &mut ConnectedClients,
     ) {
         (&mut self.inner, &mut self.clients)
     }
 
-    pub fn remove_stale_clients(&mut self, commands: &mut Commands) {
+    fn flush_pending_messages(&mut self) {
+        self.clients
+            .flush_pending_messages(&mut self.inner, self.server_broadcast_tick_id);
+        self.server_broadcast_tick_id = self.server_broadcast_tick_id.wrapping_add(1);
+    }
+
+    fn remove_stale_clients(&mut self, commands: &mut Commands) {
         self.inner.retain(|com| {
             if com.last_seen().elapsed() > Duration::from_secs(5) {
                 info!("Removing client {:?} due to inactivity", com.addr);
@@ -63,7 +79,7 @@ impl Udp {
 
 fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
     let (com, clients) = udp.borrow_mut();
-    com.recv(|mut com: UdpCommunicatorMut<_, _>| {
+    com.recv(|mut com: UdpCommunicatorMut<_, _, _>| {
         while let Some(msg) = com.read_ordered() {
             match msg {
                 UdpMsgToServer::Connect(id) => {
@@ -76,6 +92,10 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                             ClientAddr(com.addr),
                             Transform::from_translation(Vec3::Y),
                             PlayerMovementQueue::default(),
+                            PlayerBroadcast {
+                                first_movement_after_idle: true,
+                                ..Default::default()
+                            },
                         ))
                         .id();
                     clients.insert(id, u16::MAX, com.addr, entity, Vec3::Y.to_array());

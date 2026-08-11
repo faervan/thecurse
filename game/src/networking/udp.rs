@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
 pub struct Udp {
     next_id: u16,
     action_cache: VecDeque<(u16, PlayerAction)>,
-    com: UdpCommunicator<UdpMsgToServer, UdpMsgToClient>,
+    com: UdpCommunicator<UdpMsgToServer, UdpMsgToClient, PROTOCOL_VERSION>,
     next_ping_id: u16,
     pub last_pings: RingBuffer<Duration, 4>,
     pending_pings: VecDeque<(u16, Instant)>,
@@ -28,13 +28,22 @@ impl Default for Udp {
         Self {
             next_id: 0,
             action_cache: VecDeque::new(),
-            com: UdpCommunicator::default()
-                .connect(UDP_ADDR)
-                .unwrap()
-                .with_reliable_ordered_resend_interval(Duration::from_millis(50))
-                .with_fake_delay(35..45)
-                .with_fake_drop(0.05)
-                .with_fake_corruption(0.01),
+            com: {
+                let mut com = UdpCommunicator::default().connect(UDP_ADDR).unwrap();
+                // This is basically an arbitrary low interval, it is extended to
+                // `SERVER_TIMESTEP / 4` anyway, because that's the frequency at which the `send`
+                // method is called.
+                com = com.with_reliable_ordered_resend_interval(SERVER_TIMESTEP);
+                com = com.with_reliable_unordered_resend_interval(SERVER_TIMESTEP);
+                #[cfg(debug_assertions)]
+                if !std::env::args().any(|a| a == "--no-fake-unreliability"){
+                    com = com
+                        .with_fake_delay(35..45)
+                        .with_fake_drop(0.05)
+                        .with_fake_corruption(0.01);
+                }
+                com
+            },
             next_ping_id: 0,
             last_pings: RingBuffer::new(),
             pending_pings: VecDeque::new(),
@@ -110,11 +119,8 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
         }
         UdpMsgToClient::PlayerConnected { id, translation } => {
             debug!("Received msg via UDP: {msg:?}");
-            commands.spawn((
-                Player,
-                id,
-                Transform::from_translation(Vec3::from_array(translation)),
-            ));
+            let translation = Vec3::from_array(translation);
+            commands.spawn((Player, id, Transform::from_translation(translation)));
         }
         UdpMsgToClient::PlayerDisconnected { id } => {
             debug!("Received msg via UDP: {msg:?}");
@@ -126,11 +132,14 @@ fn read_udp_messages(mut udp: ResMut<Udp>, con: Res<ServerConnection>, mut comma
         UdpMsgToClient::Ping { id } => ping_ids.push(id),
 
         UdpMsgToClient::PlayerAction {
-            client_id, action, ..
+            client_id,
+            server_broadcast_tick_id,
+            action,
+            ..
         } => {
             debug!("Received action by {client_id:?}: {action:?}");
             if let Some(entity) = con.clients.get(&client_id) {
-                apply_action(action, *entity, &mut commands);
+                apply_action(action, server_broadcast_tick_id, *entity, &mut commands);
             }
         }
     });

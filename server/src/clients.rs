@@ -63,10 +63,10 @@ impl ConnectedClients {
 
     pub fn flush_pending_messages(
         &mut self,
-        udp: &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer>,
+        udp: &mut MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer, PROTOCOL_VERSION>,
+        server_broadcast_tick_id: u16,
     ) {
-        let mut iter = udp.iter_mut();
-        while let Some(mut com) = iter.next() {
+        for mut com in udp.iter_mut() {
             let Some(ConnectedClient {
                 id,
                 last_processed_action,
@@ -85,6 +85,7 @@ impl ConnectedClients {
                 com.write_ordered(UdpMsgToClient::PlayerAction {
                     client_id,
                     last_processed_action: *last_processed_action,
+                    server_broadcast_tick_id,
                     action,
                 });
             }

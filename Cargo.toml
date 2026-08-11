@@ -9,7 +9,7 @@ authors = ["faervan <faervan@proton.me>"]
 
 [workspace.dependencies]
 thecurse_core.path = "core"
-mini_udp = "0.2"
+mini_udp = "0.4"
 
 # Bevy & plugins
 bevy = { version = "0.18", default-features = false, features = [

@@ -33,6 +33,6 @@ pub enum PlayerActionBroadcast {
     },
     Movement {
         destination: [f32; 3],
-        duration_secs: f32,
+        just_started: bool,
     },
 }

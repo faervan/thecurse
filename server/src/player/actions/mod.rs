@@ -59,7 +59,6 @@ pub fn apply_action(action: PlayerAction, entity: Entity, commands: &mut Command
                         direction,
                         destination,
                         timer: Timer::new(Duration::from_secs_f32(duration_secs), TimerMode::Once),
-                        last_broadcast: Instant::now(),
                     });
                 });
         }
