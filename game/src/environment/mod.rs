@@ -1,6 +1,10 @@
 use crate::prelude::*;
 
+mod terrain;
+
 pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(terrain::plugin);
+
     app.add_observer(on_rasterized_grid_obj_spawn);
     app.add_observer(on_rock_obj_spawn);
 }

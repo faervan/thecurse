@@ -37,6 +37,7 @@ pub struct PointLightObj;
 impl IsEnvironmentObject for PointLightObj {
     const NAME: &str = "Light";
     fn bundle() -> impl Bundle {
+        #[cfg(feature = "game")]
         PointLight {
             intensity: 1_000_000.,
             range: 50.,

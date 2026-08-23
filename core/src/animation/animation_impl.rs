@@ -2,6 +2,7 @@ use super::IntoTransformationAnimation;
 use crate::prelude::*;
 use bevy::ecs::query::QueryData;
 
+#[cfg(feature = "game")]
 impl IntoTransformationAnimation<&mut BackgroundColor> for BackgroundColor {
     fn as_transform<'a, 'b>(
         &self,
@@ -20,6 +21,7 @@ impl IntoTransformationAnimation<&mut BackgroundColor> for BackgroundColor {
     }
 }
 
+#[cfg(feature = "game")]
 impl IntoTransformationAnimation<&mut BorderColor> for Color {
     fn as_transform<'a, 'b>(
         &self,

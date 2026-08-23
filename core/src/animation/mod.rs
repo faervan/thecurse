@@ -14,7 +14,9 @@ impl Plugin for AnimationPlugin {
         app.add_systems(
             Update,
             (
+                #[cfg(feature = "game")]
                 animate::<&mut BackgroundColor>,
+                #[cfg(feature = "game")]
                 animate::<&mut BorderColor>,
                 animate::<&mut Transform>,
             ),

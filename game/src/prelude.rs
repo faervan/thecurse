@@ -2,6 +2,7 @@ pub use thecurse_core::prelude::*;
 
 pub use bevy::{
     light::{NotShadowCaster, NotShadowReceiver},
+    pbr::{ExtendedMaterial, MaterialExtension},
     render::render_resource::AsBindGroup,
 };
 

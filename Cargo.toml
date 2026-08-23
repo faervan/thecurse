@@ -8,12 +8,12 @@ edition = "2024"
 authors = ["faervan <faervan@proton.me>"]
 
 [workspace.dependencies]
-thecurse_core.path = "core"
+thecurse_core = { path = "core", default-features = false }
 mini_udp = "0.4"
 
 # Bevy & plugins
 bevy = { version = "0.18", default-features = false, features = [
-  "3d",
+  "default_app",
   "serialize",
 ] }
 avian3d = { version = "0.5", default-features = false, features = [
@@ -21,10 +21,6 @@ avian3d = { version = "0.5", default-features = false, features = [
   "3d",
   "f32",
   "parry-f32",
-  # "collider-from-mesh",
-  "bevy_scene",
-  "bevy_picking",
-  "debug-plugin",
   "parallel",
   # Non-default
   "simd",

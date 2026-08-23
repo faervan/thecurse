@@ -6403,8 +6403,6 @@ dependencies = [
  "ambassador",
  "avian3d",
  "bevy",
- "bevy-inspector-egui",
- "bevy_skein",
  "bitflags 2.13.1",
  "futures",
  "mini_udp",
@@ -6428,9 +6426,11 @@ dependencies = [
 name = "thecurse_game"
 version = "0.1.0"
 dependencies = [
+ "avian3d",
  "bevy",
  "bevy-inspector-egui",
  "bevy_console",
+ "bevy_skein",
  "clap",
  "futures",
  "rand 0.10.2",
@@ -6439,6 +6439,7 @@ dependencies = [
  "smol",
  "thecurse_core",
  "thiserror 2.0.19",
+ "vleue_navigator",
 ]
 
 [[package]]

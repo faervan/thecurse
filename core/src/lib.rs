@@ -11,7 +11,6 @@ mod navmesh;
 pub mod networking;
 mod shader_utils;
 pub mod spells;
-pub mod terrain;
 pub mod utils;
 
 mod shared;
@@ -38,7 +37,6 @@ pub fn default_plugins<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
             navmesh::plugin(game_state),
             creatures::plugin(game_state),
             spells::plugin(game_state),
-            terrain::plugin(game_state),
         ));
 
         app.add_systems(OnExit(game_state), (despawn_game_entities, show_cursor));
