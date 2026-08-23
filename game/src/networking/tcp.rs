@@ -29,7 +29,7 @@ fn default_rx() -> Receiver<TcpMsgToClient> {
     smol::channel::unbounded().1
 }
 
-fn setup_connection(mut commands: Commands) {
+fn setup_connection(mut commands: Commands, settings: Res<GameSettings>) {
     let (to_server_sx, to_server_rx) = smol::channel::unbounded();
     let (to_client_sx, to_client_rx) = smol::channel::unbounded();
 
@@ -42,14 +42,20 @@ fn setup_connection(mut commands: Commands) {
     });
 
     let pool = AsyncComputeTaskPool::get();
-    pool.spawn(handle_tcp(to_client_sx, to_server_rx)).detach();
+    pool.spawn(handle_tcp(
+        to_client_sx,
+        to_server_rx,
+        (settings.addr.clone(), settings.port_tcp),
+    ))
+    .detach();
 }
 
 async fn handle_tcp(
     sx: Sender<TcpMsgToClient>,
     rx: Receiver<TcpMsgToServer>,
+    (addr, port_tcp): (String, u16),
 ) -> Result<(), TheCurseIoError> {
-    let mut stream = TcpStream::connect("127.0.0.1:7189").await?;
+    let mut stream = TcpStream::connect((addr.as_str(), port_tcp)).await?;
 
     let mut len_buf = [0_u8; 4];
     let mut buf = vec![];

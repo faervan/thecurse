@@ -2,7 +2,7 @@ use crate::prelude::*;
 use io_util::TheCurseReadWriteExt;
 
 mod handle_udp;
-pub use handle_udp::{UDP_ADDR, UdpMsgToClient, UdpMsgToServer};
+pub use handle_udp::{UdpMsgToClient, UdpMsgToServer};
 
 pub mod io_util;
 

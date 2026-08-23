@@ -2,6 +2,8 @@ use thecurse_core::{asset_plugin, assets::all_assets_loaded};
 
 use crate::prelude::*;
 
+use clap::Parser;
+
 mod camera;
 mod console;
 mod debug;
@@ -16,8 +18,31 @@ mod scenes;
 mod utils;
 mod weapon;
 
+#[derive(Parser, Debug, Resource, Reflect)]
+#[command(version, about)]
+/// Game binary of "The Curse".
+pub struct GameSettings {
+    #[arg(short, long, default_value_t = 7188)]
+    /// UDP port to connect to.
+    port_udp: u16,
+
+    #[arg(short = 'P', long, default_value_t = 7189)]
+    /// TCP port to connect to.
+    port_tcp: u16,
+
+    #[arg(short, long)]
+    #[cfg_attr(debug_assertions, arg(default_value = "0.0.0.0"))]
+    #[cfg_attr(not(debug_assertions), arg(default_value = "72.61.104.16"))]
+    /// Server address to connect to.
+    addr: String,
+}
+
 fn main() {
+    let settings = GameSettings::parse();
+
     let mut app = App::new();
+
+    app.insert_resource(settings);
 
     // Bevy default plugins
     app.add_plugins(

@@ -1,10 +1,12 @@
 use crate::prelude::*;
+
 use bevy::{
     app::{PanicHandlerPlugin, TerminalCtrlCHandlerPlugin},
     ecs::schedule::ScheduleLabel,
     log::LogPlugin,
     scene::ScenePlugin,
 };
+use clap::Parser;
 
 mod client_store;
 mod clients;
@@ -15,6 +17,19 @@ mod player;
 mod prelude;
 mod scene;
 
+#[derive(Parser, Debug, Resource, Reflect)]
+#[command(version, about)]
+/// Server binary of "The Curse".
+pub struct ServerSettings {
+    #[arg(short, long, default_value_t = 7188)]
+    /// UDP port to connect to.
+    port_udp: u16,
+
+    #[arg(short = 'P', long, default_value_t = 7189)]
+    /// TCP port to connect to.
+    port_tcp: u16,
+}
+
 #[derive(ScheduleLabel, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ServerBroadcast;
 
@@ -22,12 +37,15 @@ pub struct ServerBroadcast;
 pub struct AfterServerBroadcast;
 
 fn main() -> AppExit {
+    let settings = ServerSettings::parse();
+
     let mut app = App::new();
 
     app.add_schedule(Schedule::new(ServerBroadcast));
     app.add_schedule(Schedule::new(AfterServerBroadcast));
 
     app.insert_resource(Time::<Fixed>::from_duration(SERVER_TIMESTEP));
+    app.insert_resource(settings);
 
     app.add_systems(FixedLast, |world: &mut World, mut run: Local<u8>| {
         *run += 1;

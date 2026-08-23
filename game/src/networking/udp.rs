@@ -1,11 +1,14 @@
-use thecurse_core::{networking::UDP_ADDR, utils::wrapping::wrapping_le};
+use thecurse_core::utils::wrapping::wrapping_le;
 
 use crate::{player::apply_action, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(AppState::Game), |mut commands: Commands| {
-        commands.insert_resource(Udp::default())
-    });
+    app.add_systems(
+        OnEnter(AppState::Game),
+        |mut commands: Commands, settings: Res<GameSettings>| {
+            commands.insert_resource(Udp::new(&settings))
+        },
+    );
 
     app.add_systems(
         Update,
@@ -23,20 +26,22 @@ pub struct Udp {
     pending_pings: VecDeque<(u16, Instant)>,
 }
 
-impl Default for Udp {
-    fn default() -> Self {
+impl Udp {
+    fn new(settings: &GameSettings) -> Self {
         Self {
             next_id: 0,
             action_cache: VecDeque::new(),
             com: {
-                let mut com = UdpCommunicator::default().connect(UDP_ADDR).unwrap();
+                let mut com = UdpCommunicator::default()
+                    .connect((settings.addr.as_str(), settings.port_udp))
+                    .unwrap();
                 // This is basically an arbitrary low interval, it is extended to
                 // `SERVER_TIMESTEP / 4` anyway, because that's the frequency at which the `send`
                 // method is called.
                 com = com.with_reliable_ordered_resend_interval(SERVER_TIMESTEP);
                 com = com.with_reliable_unordered_resend_interval(SERVER_TIMESTEP);
                 #[cfg(debug_assertions)]
-                if !std::env::args().any(|a| a == "--no-fake-unreliability"){
+                if !std::env::args().any(|a| a == "--no-fake-unreliability") {
                     com = com
                         .with_fake_delay(35..45)
                         .with_fake_drop(0.05)

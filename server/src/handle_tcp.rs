@@ -25,11 +25,12 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn start_server(scene: Res<SerializedScene>) {
+fn start_server(scene: Res<SerializedScene>, settings: Res<ServerSettings>) {
     let pool = AsyncComputeTaskPool::get();
     pool.spawn(handle_send_to_server(
         scene.notify.clone(),
         scene.world.clone(),
+        settings.port_tcp,
     ))
     .detach();
 }
@@ -37,8 +38,9 @@ fn start_server(scene: Res<SerializedScene>) {
 async fn handle_send_to_server(
     notify: Arc<event_listener::Event>,
     world: Arc<RwLock<String>>,
+    port_tcp: u16,
 ) -> Result<(), TcpHandlerError> {
-    let listener = TcpListener::bind("127.0.0.1:7189").await?;
+    let listener = TcpListener::bind(("0.0.0.0", port_tcp)).await?;
     let store = Arc::new(RwLock::new(ClientStore::new(world)));
 
     loop {

@@ -1,5 +1,3 @@
-use thecurse_core::networking::UDP_ADDR;
-
 use crate::{
     clients::ConnectedClients,
     player::actions::{PlayerMovementQueue, apply_action},
@@ -7,7 +5,8 @@ use crate::{
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.init_resource::<Udp>();
+    let settings = app.world().resource::<ServerSettings>();
+    app.insert_resource(Udp::new(settings));
 
     app.add_systems(crate::AfterServerBroadcast, read_udp);
 }
@@ -20,11 +19,11 @@ pub struct Udp {
     server_broadcast_tick_id: u16,
 }
 
-impl Default for Udp {
-    fn default() -> Self {
+impl Udp {
+    fn new(settings: &ServerSettings) -> Self {
         Self {
             inner: {
-                let mut com = MultiUdpCommunicator::bind(UDP_ADDR);
+                let mut com = MultiUdpCommunicator::bind(("0.0.0.0", settings.port_udp));
                 #[cfg(debug_assertions)]
                 {
                     com = com

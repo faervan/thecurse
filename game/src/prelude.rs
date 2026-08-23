@@ -6,6 +6,7 @@ pub use bevy::{
 };
 
 pub use crate::AppState;
+pub use crate::GameSettings;
 pub use crate::scenes::GameScene;
 
 pub use crate::utils::billboard::Billboarded;
