@@ -157,7 +157,7 @@ fn update_text(
             diagnostic.last_updates,
             diagnostic.last_fixed_updates,
             udp.last_pings.values().map(|d| d.as_millis()).sum::<u128>()
-                / udp.last_pings.len() as u128
+                / udp.last_pings.len().max(1) as u128
         );
     }
 }
