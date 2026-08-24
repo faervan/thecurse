@@ -36,6 +36,12 @@ pub struct GameSettings {
     #[cfg_attr(not(debug_assertions), arg(default_value = "72.61.104.16"))]
     /// Server address to connect to.
     addr: String,
+
+    #[cfg(debug_assertions)]
+    #[arg(long)]
+    /// Setting this flag disables fake packet delay, corruption and drop.
+    /// This is only available on debug builds.
+    no_fake_unreliability: bool,
 }
 
 fn main() {

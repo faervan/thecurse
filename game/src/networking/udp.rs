@@ -41,7 +41,7 @@ impl Udp {
                 com = com.with_reliable_ordered_resend_interval(SERVER_TIMESTEP);
                 com = com.with_reliable_unordered_resend_interval(SERVER_TIMESTEP);
                 #[cfg(debug_assertions)]
-                if !std::env::args().any(|a| a == "--no-fake-unreliability") {
+                if !settings.no_fake_unreliability {
                     com = com
                         .with_fake_delay(35..45)
                         .with_fake_drop(0.05)
