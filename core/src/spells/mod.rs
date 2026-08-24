@@ -100,7 +100,7 @@ fn drive_void_spells(
         let t = spell.timer.fraction();
 
         #[cfg(feature = "game")]
-        if let Some(material) = materials.get_mut(&spell.material) {
+        if let Some(mut material) = materials.get_mut(&spell.material) {
             material.base.progress = t;
         }
 

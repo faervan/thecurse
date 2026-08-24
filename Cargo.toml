@@ -12,11 +12,12 @@ thecurse_core = { path = "core", default-features = false }
 mini_udp = "0.4"
 
 # Bevy & plugins
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
   "default_app",
+  "scene",
   "serialize",
 ] }
-avian3d = { version = "0.5", default-features = false, features = [
+avian3d = { version = "0.7", default-features = false, features = [
   # Default
   "3d",
   "f32",
@@ -26,18 +27,18 @@ avian3d = { version = "0.5", default-features = false, features = [
   "simd",
   "serialize",
 ] }
-bevy_skein.version = "0.5"
+bevy_skein.version = "0.6"
 vleue_navigator = { version = "0.15", default-features = false, features = [
   "avian3d",
   "detailed-layers",
 ] }
-bevy_console = "0.17"
+bevy_console = "0.18"
 
 # Dev dependencies
-egui = "0.33"
-egui_dock = "0.18"
-bevy_egui.version = "0.39"
-bevy-inspector-egui.version = "0.36"
+egui = "0.34"
+egui_dock = "0.19"
+bevy_egui.version = "0.40"
+bevy-inspector-egui.version = "0.37"
 
 # Logging
 # Set max log levels. This helps avoid unwanted low-severity log spam, which can affect performance.
@@ -64,6 +65,10 @@ bitflags = "2.10"
 rand = "0.10"
 ambassador = "0.5"
 clap = { version = "4.5", features = ["derive"] }
+
+[patch.crates-io]
+vleue_navigator = { git = "https://github.com/vleue/vleue_navigator.git" }
+bevy-inspector-egui = { git = "https://github.com/taboky-dev/bevy-inspector-egui.git", branch = "update_bevy_egui" }
 
 [workspace.lints.rust]
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.

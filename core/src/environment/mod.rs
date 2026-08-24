@@ -41,7 +41,7 @@ impl IsEnvironmentObject for PointLightObj {
         PointLight {
             intensity: 1_000_000.,
             range: 50.,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..Default::default()
         }
     }
@@ -57,6 +57,7 @@ impl IsEnvironmentObject for RasterizedGridObj {
     fn bundle() -> impl Bundle {
         children![(
             Name::new("Ground Collider"),
+            #[cfg(feature = "game")]
             PhysicsPickable,
             RigidBody::Static,
             Collider::cuboid(100., 1., 100.),
@@ -76,6 +77,7 @@ impl IsEnvironmentObject for RockObj {
     fn bundle() -> impl Bundle {
         (
             Obstacle,
+            #[cfg(feature = "game")]
             PhysicsPickable,
             RigidBody::Static,
             Collider::cuboid(5., 5., 5.),

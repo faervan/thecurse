@@ -1,6 +1,6 @@
 use super::IntoTransformationAnimation;
 use crate::prelude::*;
-use bevy::ecs::query::QueryData;
+use bevy::ecs::query::{IterQueryData, QueryData};
 
 #[cfg(feature = "game")]
 impl IntoTransformationAnimation<&mut BackgroundColor> for BackgroundColor {
@@ -65,7 +65,7 @@ where
         + Sync
         + 'static,
     F: FnMut(<Q as QueryData>::Item<'_, '_>, f32) + Send + Sync + 'static,
-    Q: QueryData,
+    Q: IterQueryData,
     T: Clone + Send + Sync + 'static,
     for<'a, 'b> <<Q as QueryData>::ReadOnly as QueryData>::Item<'a, 'b>: Deref<Target = T>,
 {
@@ -88,7 +88,7 @@ where
         + Sync
         + 'static,
     F: FnMut(<Q as QueryData>::Item<'_, '_>, f32) + Send + Sync + 'static,
-    Q: QueryData,
+    Q: IterQueryData,
     T: Send + Sync + 'static,
     G: Fn(<<Q as QueryData>::ReadOnly as QueryData>::Item<'_, '_>) -> T
         + Clone

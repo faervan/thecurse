@@ -29,7 +29,7 @@ pub(super) fn load_player_assets(
         .expect("No default scene in the gltf");
     let graph_handle = world.resource_mut::<Assets<AnimationGraph>>().add(graph);
 
-    let mut scene_assets = world.resource_mut::<Assets<Scene>>();
+    let mut scene_assets = world.resource_mut::<Assets<WorldAsset>>();
     let scene_world = &mut scene_assets.get_mut(&scene).unwrap().world;
     let animation_players: Vec<_> = scene_world
         .query_filtered::<Entity, With<AnimationPlayer>>()

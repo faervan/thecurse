@@ -25,7 +25,8 @@ pub fn publish_scene(scene: In<String>, scene_res: Res<SerializedScene>) {
 
 pub fn serialize_scene(world: &World, query: Query<Entity, With<GameStateEntity>>) -> String {
     debug!("running serialize_scene");
-    let scene = DynamicSceneBuilder::from_world(world)
+    let type_registry = world.resource::<AppTypeRegistry>().read();
+    let scene = DynamicWorldBuilder::from_world(world, &type_registry)
         //
         // Allowed resources
         //

@@ -1,4 +1,4 @@
-use bevy::scene::{SceneInstanceReady, serde::SceneDeserializer};
+use bevy::world_serialization::{WorldInstanceReady, serde::WorldDeserializer};
 use serde::de::DeserializeSeed;
 
 use crate::prelude::*;
@@ -33,10 +33,11 @@ fn read_server_messages(
     mut con: ResMut<ServerConnection>,
     mut udp: ResMut<Udp>,
     query: Query<&mut Text, With<TcpConLogText>>,
-    mut scenes: ResMut<Assets<DynamicScene>>,
+    mut scenes: ResMut<Assets<DynamicWorld>>,
     mut commands: Commands,
     mut recv_closed_log: Local<bool>,
     type_registry: Res<AppTypeRegistry>,
+    asset_server: Res<AssetServer>,
 ) {
     for mut text in query {
         loop {
@@ -50,16 +51,17 @@ fn read_server_messages(
                     {
                         con.client_id = Some(client_id);
                         udp.write(UdpMsgToServer::Connect(client_id));
-                        let result = SceneDeserializer {
+                        let result = WorldDeserializer {
                             type_registry: &type_registry.read(),
+                            load_from_path: &mut &*asset_server,
                         }
                         .deserialize(&mut ron::Deserializer::from_str(world).unwrap());
                         match result {
                             Ok(scene) => {
                                 info!("success!");
                                 let scene = scenes.add(scene);
-                                commands.spawn(DynamicSceneRoot(scene)).observe(
-                                    |_event: On<SceneInstanceReady>,
+                                commands.spawn(DynamicWorldRoot(scene)).observe(
+                                    |_event: On<WorldInstanceReady>,
                                      mut commands: Commands,
                                      query: Query<
                                         Entity,

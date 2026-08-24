@@ -25,7 +25,7 @@ pub(super) fn plugin(app: &mut App) {
             .expect("No default scene in the gltf");
         let graph_handle = world.resource_mut::<Assets<AnimationGraph>>().add(graph);
 
-        let mut scene_assets = world.resource_mut::<Assets<Scene>>();
+        let mut scene_assets = world.resource_mut::<Assets<WorldAsset>>();
         let scene_world = &mut scene_assets.get_mut(&scene).unwrap().world;
         let animation_players: Vec<_> = scene_world
             .query_filtered::<Entity, With<AnimationPlayer>>()
@@ -66,7 +66,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, TypePath)]
 struct GoblinHandles {
-    scene: Handle<Scene>,
+    scene: Handle<WorldAsset>,
     idle: AnimationNodeIndex,
     forwards: AnimationNodeIndex,
     attack_slash: AnimationNodeIndex,
@@ -79,7 +79,10 @@ impl GltfAssetPath for GoblinHandles {
 fn on_goblin_spawn(event: On<Add, Goblin>, goblin: Res<GoblinHandles>, mut commands: Commands) {
     commands
         .entity(event.entity)
-        .try_insert((SceneRoot(goblin.scene.clone()), ShowHealthBar::default()))
+        .try_insert((
+            WorldAssetRoot(goblin.scene.clone()),
+            ShowHealthBar::default(),
+        ))
         .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
         .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
 }

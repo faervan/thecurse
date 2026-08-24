@@ -48,7 +48,7 @@ fn update_health_bars(
 ) {
     for (health_bar, health) in query {
         if let Some(handle) = health_bar.0.as_ref()
-            && let Some(material) = materials.get_mut(handle)
+            && let Some(mut material) = materials.get_mut(handle)
         {
             material.health_percent = health.current / health.max;
         }

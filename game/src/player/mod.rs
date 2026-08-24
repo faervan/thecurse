@@ -17,7 +17,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, TypePath)]
 pub struct PlayerCharacterHandle {
-    scene: Handle<Scene>,
+    scene: Handle<WorldAsset>,
     idle: AnimationNodeIndex,
     running: AnimationNodeIndex,
     jumping: AnimationNodeIndex,
@@ -37,7 +37,10 @@ fn on_player_spawn(
 ) {
     commands
         .entity(event.entity)
-        .try_insert((SceneRoot(character.scene.clone()), ShowHealthBar::default()))
+        .try_insert((
+            WorldAssetRoot(character.scene.clone()),
+            ShowHealthBar::default(),
+        ))
         .observe(on_ready_insert_child_pointer::<GltfAnimationTarget>)
         .observe(on_ready_insert_child_pointer::<WeaponSocketHandle>);
 }

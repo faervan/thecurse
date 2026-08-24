@@ -1,3 +1,4 @@
+use bevy::dev_tools::render_debug::RenderDebugOverlayPlugin;
 use thecurse_core::{asset_plugin, assets::all_assets_loaded};
 
 use crate::prelude::*;
@@ -57,19 +58,23 @@ fn main() {
                 }),
                 ..Default::default()
             })
-            .set(asset_plugin()),
+            .set(asset_plugin())
+            .disable::<RenderDebugOverlayPlugin>(),
     );
+
+    // Bevy ecosystem plugins
+    app.add_plugins(bevy_skein::SkeinPlugin::default());
 
     // Custom plugins
     app.add_plugins((
         thecurse_core::default_plugins(AppState::Game),
         debug::plugin,
+        console::plugin,
         camera::CameraControllerPlugin::new(AppState::Game),
         menu::plugin,
         utils::plugin,
         networking::plugin,
         hud::plugin,
-        console::plugin,
         scenes::plugin,
         environment::plugin,
         weapon::plugin,
@@ -83,9 +88,9 @@ fn main() {
     app.add_systems(
         Update,
         (
-            set_state_menu.run_if(in_state(AppState::Loading).and(all_assets_loaded)),
+            set_state_menu.run_if(in_state(AppState::Loading).and_then(all_assets_loaded)),
             return_to_menu
-                .run_if(in_state(AppState::Game).and(input_just_pressed(KeyCode::Escape))),
+                .run_if(in_state(AppState::Game).and_then(input_just_pressed(KeyCode::Escape))),
         ),
     );
 

@@ -11,8 +11,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (|mut next_state: ResMut<NextState<AppState>>| next_state.set(AppState::Game)).run_if(
-            in_state(AppState::Menu)
-                .and(input_just_pressed(KeyCode::KeyG).or(input_just_pressed(KeyCode::KeyP))),
+            in_state(AppState::Menu).and_then(
+                input_just_pressed(KeyCode::KeyG).or_else(input_just_pressed(KeyCode::KeyP)),
+            ),
         ),
     );
     app.add_systems(
@@ -20,7 +21,7 @@ pub(super) fn plugin(app: &mut App) {
         (|mut exit: MessageWriter<AppExit>| {
             exit.write(AppExit::Success);
         })
-        .run_if(in_state(AppState::Menu).and(input_just_pressed(KeyCode::KeyQ))),
+        .run_if(in_state(AppState::Menu).and_then(input_just_pressed(KeyCode::KeyQ))),
     );
 }
 

@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Resource, TypePath)]
 struct PlayerWeapons {
-    sword: Handle<Scene>,
+    sword: Handle<WorldAsset>,
 }
 
 impl GltfAssetPath for PlayerWeapons {
@@ -53,9 +53,11 @@ impl WeaponSocketHandle {
         let socket_entity = world.get::<Self>(hook.entity).unwrap().0;
         let sword = world.resource::<PlayerWeapons>().sword.clone();
         // let mut id = None;
-        world
-            .commands()
-            .spawn((Name::new("Sword"), SceneRoot(sword), ChildOf(socket_entity)));
+        world.commands().spawn((
+            Name::new("Sword"),
+            WorldAssetRoot(sword),
+            ChildOf(socket_entity),
+        ));
         // .with_children(|p| {
         //     id = Some(
         //         p.spawn((

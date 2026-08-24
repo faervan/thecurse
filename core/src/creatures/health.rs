@@ -6,7 +6,7 @@ pub(super) fn plugin<STATE: States + Copy>(game_state: STATE) -> impl Plugin {
 
         app.add_systems(
             Update,
-            apply_damage.run_if(in_state(game_state).and(on_message::<DealDamage>)),
+            apply_damage.run_if(in_state(game_state).and_then(on_message::<DealDamage>)),
         );
     }
 }

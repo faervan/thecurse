@@ -7,6 +7,7 @@ use bevy::{
     scene::ScenePlugin,
 };
 use clap::Parser;
+use thecurse_core::asset_plugin;
 
 mod client_store;
 mod clients;
@@ -64,30 +65,31 @@ fn main() -> AppExit {
         LogPlugin::default(),
         TransformPlugin,
         TerminalCtrlCHandlerPlugin,
-        AssetPlugin::default(),
+        asset_plugin(),
         ScenePlugin,
     ));
 
     // Avian plugins
     app.add_plugins((
         PhysicsSchedulePlugin::default(),
-        ColliderBackendPlugin::<Collider>::default(),
-        ColliderHierarchyPlugin,
-        ColliderTransformPlugin::default(),
-        // since avian 0.6
-        // ColliderTreePlugin
-        BroadPhasePlugin::<()>::default(),
-        // since avian 0.6
-        // BvhBroadPhasePlugin
-        NarrowPhasePlugin::<Collider>::default(),
-        SolverPlugins::default(),
-        JointPlugin,
         MassPropertyPlugin::default(),
         ForcePlugin,
+        ColliderHierarchyPlugin,
+        ColliderTransformPlugin::default(),
+        // Default collider
+        ColliderBackendPlugin::<Collider>::default(),
+        ColliderTreePlugin::<Collider>::default(),
+        NarrowPhasePlugin::<Collider>::default(),
+        //
+        SolverPlugins::default(),
+        //
+        BroadPhaseCorePlugin,
+        BvhBroadPhasePlugin::<()>::default(),
+        JointPlugin,
         // Not needed on server?
         // SpatialQueryPlugin,
-        PhysicsInterpolationPlugin::default(),
         PhysicsTransformPlugin::default(),
+        PhysicsInterpolationPlugin::default(),
     ));
 
     app.add_plugins((

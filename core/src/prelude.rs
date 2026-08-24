@@ -1,5 +1,6 @@
 pub use std::collections::VecDeque;
 pub use std::f32::consts::{PI, TAU};
+pub use std::fmt::Debug;
 pub use std::marker::PhantomData;
 pub use std::ops::{Deref, DerefMut};
 pub use std::time::{Duration, Instant};

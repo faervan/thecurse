@@ -1,4 +1,4 @@
-use bevy_console::{AddConsoleCommand as _, ConsoleCommand, ConsolePlugin};
+use bevy_console::{AddConsoleCommand as _, ConsoleCommand, ConsoleConfiguration, ConsolePlugin};
 use clap::Parser;
 
 use crate::prelude::*;

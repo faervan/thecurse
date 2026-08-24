@@ -11,13 +11,12 @@ dev = [
   "bevy/dynamic_linking",
   "bevy/dev",
   "bevy/track_location",
-  "bevy/file_watcher",
   # Enables hot reload for in-memory asset providers
   "bevy/embedded_watcher",
   # Needed for https://github.com/Lommix/bevy_inspector.nvim
   "bevy/bevy_remote",
 ]
-game = []
+game = ["bevy/3d", "bevy/ui"]
 
 [dependencies]
 mini_udp.workspace = true

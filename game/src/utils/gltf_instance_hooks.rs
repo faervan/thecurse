@@ -1,4 +1,4 @@
-use bevy::scene::SceneInstanceReady;
+use bevy::world_serialization::WorldInstanceReady;
 
 use crate::prelude::*;
 
@@ -23,7 +23,7 @@ pub trait ChildEntityPointer: Component {
 }
 
 pub fn on_ready_insert_child_pointer<T: ChildEntityPointer>(
-    event: On<SceneInstanceReady>,
+    event: On<WorldInstanceReady>,
     mut commands: Commands,
     query: Query<(Option<&Children>, Has<T::Target>)>,
 ) {

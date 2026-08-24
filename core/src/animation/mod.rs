@@ -1,9 +1,12 @@
-use std::{fmt::Debug, marker::PhantomData, time::Duration};
+#[cfg(feature = "game")]
+use bevy::ecs::system::ObserverSystem;
 
-use bevy::{
-    ecs::{component::Mutable, query::QueryData, system::ObserverSystem},
-    prelude::*,
+use bevy::ecs::{
+    component::Mutable,
+    query::{IterQueryData, QueryData},
 };
+
+use crate::prelude::*;
 
 mod animation_impl;
 
@@ -25,16 +28,16 @@ impl Plugin for AnimationPlugin {
 }
 
 #[derive(Component)]
-pub struct Animation<Q: QueryData> {
+pub struct Animation<Q: IterQueryData> {
     f: Box<dyn FnMut(Q::Item<'_, '_>, f32) + Send + Sync + 'static>,
     timer: Timer,
     _c: PhantomData<Q>,
 }
 
-impl<Q: QueryData> Animation<Q> {
+impl<Q: IterQueryData> Animation<Q> {
     pub fn new<O, F>(f: F, duration_ms: u64, origin: O::Item<'_, '_>) -> Self
     where
-        O: QueryData,
+        O: IterQueryData,
         F: IntoTransformationAnimation<Q, O>,
     {
         Self {
@@ -48,8 +51,8 @@ impl<Q: QueryData> Animation<Q> {
 pub trait IntoTransformationAnimation<Q, O = <Q as QueryData>::ReadOnly>:
     Send + Sync + 'static
 where
-    Q: QueryData,
-    O: QueryData,
+    Q: IterQueryData,
+    O: IterQueryData,
 {
     fn as_transform<'a, 'b>(
         &self,
@@ -58,13 +61,14 @@ where
     fn reverse(&self, origin: O::Item<'_, '_>) -> Self;
 }
 
+#[cfg(feature = "game")]
 /// Trigger an animation when [Pointer<E>] was fired.
 /// See [pointer_events](https://docs.rs/bevy/latest/bevy/picking/events/fn.pointer_events.html)
 pub fn pointer_animation<E, Q, F>(f: F, duration: Duration) -> impl ObserverSystem<Pointer<E>, ()>
 where
     E: Debug + Clone + Reflect,
-    Q: QueryData + Send + Sync + 'static,
-    for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+    Q: IterQueryData + Send + Sync + 'static,
+    for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
     F: IntoTransformationAnimation<Q>,
 {
     IntoSystem::into_system(
@@ -86,7 +90,7 @@ pub fn animate<Q>(
     time: Res<Time>,
     mut commands: Commands,
 ) where
-    Q: QueryData + Send + Sync + 'static,
+    Q: IterQueryData + Send + Sync + 'static,
 {
     for (c, mut animation, entity) in animations {
         animation.timer.tick(time.delta());
@@ -104,40 +108,45 @@ pub trait AnimationExt {
         C: Component<Mutability = Mutable>,
         for<'a> F: IntoTransformationAnimation<&'a mut C>;
 
+    #[cfg(feature = "game")]
     fn animate_event<E, Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
         E: Debug + Clone + Reflect,
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         F: IntoTransformationAnimation<Q>;
 
+    #[cfg(feature = "game")]
     fn animate<IN, OUT, Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
         IN: Debug + Clone + Reflect,
         OUT: Debug + Clone + Reflect,
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>;
 
+    #[cfg(feature = "game")]
     fn animate_hover<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>;
 
+    #[cfg(feature = "game")]
     fn animate_press<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>;
 
+    #[cfg(feature = "game")]
     fn animate_drag<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>;
 }
@@ -155,22 +164,24 @@ impl AnimationExt for EntityCommands<'_> {
         })
     }
 
+    #[cfg(feature = "game")]
     fn animate_event<E, Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
         E: Debug + Clone + Reflect,
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         F: IntoTransformationAnimation<Q>,
     {
         self.observe(pointer_animation::<E, _, _>(f, duration))
     }
 
+    #[cfg(feature = "game")]
     fn animate<IN, OUT, Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
         IN: Debug + Clone + Reflect,
         OUT: Debug + Clone + Reflect,
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>,
     {
@@ -192,30 +203,33 @@ impl AnimationExt for EntityCommands<'_> {
         )
     }
 
+    #[cfg(feature = "game")]
     fn animate_hover<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>,
     {
         self.animate::<Over, Out, _, _>(f, duration)
     }
 
+    #[cfg(feature = "game")]
     fn animate_press<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>,
     {
         self.animate::<Press, Release, _, _>(f, duration)
     }
 
+    #[cfg(feature = "game")]
     fn animate_drag<Q, F>(&mut self, f: F, duration: Duration) -> &mut Self
     where
-        Q: QueryData + Send + Sync + 'static,
-        for<'a, 'b> Q::Item<'a, 'b>: QueryData + Send + Sync,
+        Q: IterQueryData + Send + Sync + 'static,
+        for<'a, 'b> Q::Item<'a, 'b>: IterQueryData + Send + Sync,
         for<'a, 'b> <Q::ReadOnly as QueryData>::Item<'a, 'b>: Clone,
         F: IntoTransformationAnimation<Q>,
     {
