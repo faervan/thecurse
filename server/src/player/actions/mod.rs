@@ -1,6 +1,6 @@
 use thecurse_core::creatures::player::{AttackState, MOVEMENT_SPEED};
 
-use crate::{player::actions::movement::PlayerMovement, prelude::*};
+use crate::{clients::ConnectedClient, player::actions::movement::PlayerMovement, prelude::*};
 
 mod attack;
 
@@ -11,15 +11,22 @@ pub fn plugin(app: &mut App) {
     app.add_plugins((attack::plugin, movement::plugin));
 }
 
-pub fn apply_action(action: PlayerAction, entity: Entity, commands: &mut Commands) {
+pub fn apply_action(
+    action: PlayerAction,
+    action_id: u16,
+    client: &mut ConnectedClient,
+    commands: &mut Commands,
+) {
     match action {
         PlayerAction::Attack {
             ty,
             translation,
             rotation,
         } => {
+            debug!("attack! {:?} does {ty:?}", client.id);
+            client.last_processed_action = action_id;
             commands
-                .entity(entity)
+                .entity(client.entity)
                 .insert(AttackState::Attacking {
                     timer: Timer::new(ty.duration(), TimerMode::Once),
                     ty,
@@ -31,16 +38,20 @@ pub fn apply_action(action: PlayerAction, entity: Entity, commands: &mut Command
                 });
         }
         PlayerAction::Movement {
-            origin,
             direction,
-            destination,
-            duration_secs,
+            duration_millis,
         } => {
-            let origin = Vec3::from_array([origin[0], 0., origin[1]]);
-            let destination = Vec3::from_array([destination[0], 0., destination[1]]);
+            if duration_millis == 0 {
+                client.last_processed_action = action_id;
+                return;
+            }
+            debug!(
+                "Player {:?} moves for {duration_millis}ms in direction {direction:?}",
+                client.id
+            );
             let direction = Vec2::from_array(direction).normalize_or_zero();
             commands
-                .entity(entity)
+                .entity(client.entity)
                 .entry::<Transform>()
                 .and_modify(move |mut pos| {
                     pos.look_to(-Vec3::new(direction.x, 0., direction.y), Vec3::Y);
@@ -55,10 +66,12 @@ pub fn apply_action(action: PlayerAction, entity: Entity, commands: &mut Command
                 .entry::<PlayerMovementQueue>()
                 .and_modify(move |mut queue| {
                     queue.push_back(PlayerMovement {
-                        origin,
                         direction,
-                        destination,
-                        timer: Timer::new(Duration::from_secs_f32(duration_secs), TimerMode::Once),
+                        timer: Timer::new(
+                            Duration::from_millis(duration_millis as u64),
+                            TimerMode::Once,
+                        ),
+                        action_id,
                     });
                 });
         }

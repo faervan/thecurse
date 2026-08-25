@@ -17,7 +17,7 @@ pub struct ServerConnection {
     pub sender: Sender<TcpMsgToServer>,
     #[reflect(ignore, default = "default_rx")]
     pub receiver: Receiver<TcpMsgToClient>,
-    pub client_id: Option<ClientId>,
+    pub client_id: Option<(ClientId, Entity)>,
     pub clients: HashMap<ClientId, Entity>,
 }
 

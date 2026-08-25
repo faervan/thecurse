@@ -122,19 +122,20 @@ impl DebugElement for CustomDiagnosticPlugin {
     }
 
     on_enable!(|mut commands: Commands| {
-        commands
-            .spawn((
-                CustomDiagnosticUi,
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(10.0),
-                    right: Val::Px(10.0),
-                    ..default()
-                },
-            ))
-            .with_children(|parent| {
-                parent.spawn((Text::new("Diagnostics"), CustomDiagnosticUiText));
-            });
+        commands.spawn((
+            CustomDiagnosticUi,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(10.0),
+                right: Val::Px(10.0),
+                ..default()
+            },
+            children![(
+                Text::new("Diagnostics"),
+                CustomDiagnosticUiText,
+                TextLayout::justify(Justify::End)
+            )],
+        ));
     });
 
     on_disable!(
@@ -150,10 +151,20 @@ fn update_text(
     diagnostic: Res<CustomDiagnosticPlugin>,
     udp: Res<Udp>,
     query: Query<&mut Text, With<CustomDiagnosticUiText>>,
+    characer: Query<&Transform, With<MainCharacter>>,
 ) {
     for mut text in query {
+        let pos = match characer.single() {
+            Ok(pos) => format!(
+                "\nx: {} y: {} z: {}",
+                (pos.translation.x * 100.).round() / 100.,
+                (pos.translation.y * 100.).round() / 100.,
+                (pos.translation.z * 100.).round() / 100.,
+            ),
+            Err(_) => String::new(),
+        };
         text.0 = format!(
-            "Updates: {}Hz\nFixed Updates: {}Hz\nPing: {}ms",
+            "Updates: {}Hz\nFixed Updates: {}Hz\nPing: {}ms{pos}",
             diagnostic.last_updates,
             diagnostic.last_fixed_updates,
             udp.last_pings.values().map(|d| d.as_millis()).sum::<u128>()

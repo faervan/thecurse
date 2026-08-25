@@ -16,7 +16,7 @@ pub struct Udp {
     #[deref]
     inner: MultiUdpCommunicator<UdpMsgToClient, UdpMsgToServer, PROTOCOL_VERSION>,
     pub clients: ConnectedClients,
-    server_broadcast_tick_id: u16,
+    pub server_broadcast_tick_id: u16,
 }
 
 impl Udp {
@@ -32,7 +32,7 @@ impl Udp {
                         .with_fake_corruption(0.01);
                 }
                 // This is basically an arbitrary low interval, it is extended to
-                // `SERVER_TIMESTEP / 4` anyway, because that's the frequency at which the `send`
+                // `SERVER_TIMESTEP * 4` anyway, because that's the frequency at which the `send`
                 // method is called.
                 com = com.with_reliable_ordered_resend_interval(SERVER_TIMESTEP);
                 com = com.with_reliable_unordered_resend_interval(SERVER_TIMESTEP);
@@ -99,7 +99,7 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                         .id();
                     clients.insert(id, u16::MAX, com.addr, entity, Vec3::Y.to_array());
                     com.write_ordered(UdpMsgToClient::Connected {
-                        translation: Vec3::Y.to_array()
+                        translation: Vec3::Y.to_array(),
                     });
                 }
                 UdpMsgToServer::Disconnect => {
@@ -109,18 +109,12 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                     }
                 }
                 UdpMsgToServer::Ping { id } => com.write_ordered(UdpMsgToClient::Ping { id }),
-                UdpMsgToServer::Action { id, action } => {
-                    let id = clients.update_last_msg(id, &com.addr).unwrap();
-                    match action {
-                        PlayerAction::Attack { ty, .. } => {
-                            debug!("attack! {id:?} does {ty:?}");
-                        }
-                        PlayerAction::Movement { origin, direction, destination, duration_secs } => {
-                            debug!("Player {id:?} moves for {duration_secs}s from {origin:?} to {destination:?} (direction: {direction:?})");
-                        }
-                    }
-                    if let Some(entity) = clients.get_client_entity(&id) {
-                        apply_action(action, entity, &mut commands);
+                UdpMsgToServer::Action {
+                    id: action_id,
+                    action,
+                } => {
+                    if let Some(client) = clients.get_mut(&com.addr) {
+                        apply_action(action, action_id, client, &mut commands);
                     }
                 }
             }

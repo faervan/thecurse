@@ -24,7 +24,7 @@ impl Default for Inventory {
                 Some(Item::SpawnGoblin(items::ItemSpawnGoblin)),
                 Some(Item::SpawnTwoGoblins(items::ItemSpawnTwoGoblins)),
                 Some(Item::SpawnGoblinsRandom(items::ItemSpawnGoblinsRandom)),
-                Some(Item::RespawnPlayer(items::ItemRespawnPlayer)),
+                None,
                 None,
                 None,
                 None,

@@ -6,8 +6,13 @@ use crate::{player::PlayerCharacterHandle, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
-        FixedUpdate,
-        (movement_input, movement_changes.after(movement_input)).run_if(in_state(AppState::Game)),
+        FixedLast,
+        (
+            movement_input,
+            movement_correction,
+            movement_changes.after(movement_input),
+        )
+            .run_if(in_state(AppState::Game)),
     );
 }
 
@@ -16,10 +21,10 @@ const MOVEMENT_ANIMATION_SPEED: f32 = 1. + MOVEMENT_SPEED * 0.1;
 fn movement_input(
     input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut udp: ResMut<Udp>,
     mut commands: Commands,
     query: Query<
         (
+            &mut MainCharacter,
             &mut MovementState,
             &AerialState,
             &AttackState,
@@ -27,7 +32,7 @@ fn movement_input(
             &mut Transform,
             &mut LinearVelocity,
         ),
-        (With<MainCharacter>, Without<CameraController>),
+        Without<CameraController>,
     >,
     mut armatures: Query<
         &mut Transform,
@@ -39,7 +44,8 @@ fn movement_input(
     >,
     camera: Single<&Transform, With<CameraController>>,
 ) {
-    for (mut moving, aerial, attack, target, mut transform, mut velocity) in query {
+    for (mut character, mut movement, aerial, attack, target, mut transform, mut velocity) in query
+    {
         let mut direction = Vec3::ZERO;
         if input.pressed(KeyCode::KeyW) {
             direction.z -= 1.;
@@ -55,20 +61,30 @@ fn movement_input(
         }
 
         if direction == Vec3::ZERO || *attack != AttackState::None {
-            if moving.base_direction != Vec3::ZERO {
-                moving.base_direction = Vec3::ZERO;
+            if movement.base_direction != Vec3::ZERO {
+                movement.base_direction = Vec3::ZERO;
                 velocity.x = 0.;
                 velocity.z = 0.;
-                moving.propagation_timer.tick(time.delta());
-                udp.write_action(PlayerAction::Movement {
-                    origin: moving.last_pos.xz().to_array(),
-                    direction: moving.last_propagated_dir.unwrap().to_array(),
-                    destination: transform.translation.xz().to_array(),
-                    duration_secs: moving.propagation_timer.elapsed_secs(),
+                movement.propagation_timer.tick(time.delta());
+
+                let duration_millis = movement.propagation_timer.elapsed().as_millis() as u8;
+                if duration_millis == 0 {
+                    movement.last_propagated_dir = None;
+                    transform.translation = movement.last_pos;
+                    continue;
+                }
+                let action = PlayerAction::Movement {
+                    direction: (transform.translation - movement.last_pos).xz().to_array(),
+                    duration_millis,
+                };
+                character.add_action(super::CachedPlayerAction::Movement {
+                    action,
+                    motion: transform.translation - movement.last_pos,
                 });
-                moving.last_propagated_dir = None;
-                moving.last_pos = transform.translation;
-                moving.propagation_timer.reset();
+
+                movement.last_propagated_dir = None;
+                movement.last_pos = transform.translation;
+                movement.propagation_timer.reset();
             }
             continue;
         }
@@ -79,7 +95,7 @@ fn movement_input(
         transform.rotation = forward;
         transform.rotate_y((-direction.x).atan2(-direction.z));
 
-        if direction != moving.base_direction {
+        if direction != movement.base_direction {
             // Rotate the inner armature entity that is the root of the character mesh back to the
             // rotation the player had previously, then catch up smoothly.
             // Directly animating the character rotation would logically make more sense, but I
@@ -93,38 +109,70 @@ fn movement_input(
 
                 commands.entity(**target).transition(Quat::IDENTITY, 100);
             }
-            moving.base_direction = direction;
+            movement.base_direction = direction;
         }
 
         direction = (camera.rotation * direction).with_y(0.).normalize() * MOVEMENT_SPEED;
 
-        if moving.last_propagated_dir.is_none() {
-            moving.last_propagated_dir = Some(direction.xz());
+        if movement.last_propagated_dir.is_none() {
+            movement.last_propagated_dir = Some(direction.xz());
         }
 
         if *aerial != AerialState::Grounded {
             direction *= AERIAL_MOVEMENT_FACTOR;
         }
 
-        moving.propagation_timer.tick(time.delta());
-        if moving.propagation_timer.just_finished()
-            || moving
+        movement.propagation_timer.tick(time.delta());
+        if movement.propagation_timer.just_finished()
+            || movement
                 .last_propagated_dir
                 // Send update direction changed by at least 7.5°
                 .is_some_and(|last| last.angle_to(direction.xz()).abs() > PI / 24.)
         {
-            udp.write_action(PlayerAction::Movement {
-                origin: moving.last_pos.xz().to_array(),
-                direction: direction.xz().to_array(),
-                destination: transform.translation.xz().to_array(),
-                duration_secs: moving.propagation_timer.elapsed_secs(),
+            let duration_millis = movement.propagation_timer.elapsed().as_millis() as u8
+                + movement.propagation_timer.times_finished_this_tick() as u8
+                    * movement.propagation_timer.duration().as_millis() as u8;
+            if duration_millis == 0 {
+                debug_assert!(false);
+            }
+            let action = PlayerAction::Movement {
+                direction: (transform.translation - movement.last_pos).xz().to_array(),
+                duration_millis,
+            };
+            character.add_action(super::CachedPlayerAction::Movement {
+                action,
+                motion: transform.translation - movement.last_pos,
             });
-            moving.last_propagated_dir = Some(direction.xz());
-            moving.last_pos = transform.translation;
+
+            movement.last_propagated_dir = Some(direction.xz());
+            movement.last_pos = transform.translation;
         }
 
         velocity.x = direction.x;
         velocity.z = direction.z;
+    }
+}
+
+fn movement_correction(
+    time: Res<Time>,
+    query: Query<(&mut MainCharacter, &MovementState, &mut Transform)>,
+) {
+    for (mut character, movement, mut pos) in query {
+        if character.correction_progress < 1. {
+            let tick = time.delta_secs() * 5.;
+            if character.correction_progress == 0. {
+                character.correction = character.authoritative_translation
+                    - (movement.last_pos - character.predicted_movement);
+            }
+            character.correction_progress += tick;
+            if character.correction_progress >= 1. {
+                pos.translation +=
+                    character.correction * (tick - (character.correction_progress - 1.));
+                character.correction = Vec3::ZERO;
+            } else {
+                pos.translation += character.correction * tick;
+            }
+        }
     }
 }
 

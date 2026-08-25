@@ -9,7 +9,7 @@ pub use movement::*;
 mod aerial;
 pub use aerial::*;
 
-#[derive(ByteRepr, Debug, Clone)]
+#[derive(ByteRepr, Debug, Clone, Reflect)]
 pub enum PlayerAction {
     Attack {
         ty: AttackType,
@@ -17,10 +17,8 @@ pub enum PlayerAction {
         rotation: [f32; 4],
     },
     Movement {
-        origin: [f32; 2],
         direction: [f32; 2],
-        destination: [f32; 2],
-        duration_secs: f32,
+        duration_millis: u8,
     },
 }
 

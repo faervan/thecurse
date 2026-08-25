@@ -22,6 +22,15 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
+#[derive(Reflect)]
+pub enum CachedPlayerAction {
+    Movement {
+        /// TODO! Maybe remove, not useful information?
+        action: PlayerAction,
+        motion: Vec3,
+    },
+}
+
 #[derive(Component, Reflect, Debug)]
 #[reflect(Component)]
 struct ScriptedPlayerMovementQueue {

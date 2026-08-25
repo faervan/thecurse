@@ -21,12 +21,17 @@ pub(super) fn plugin(app: &mut App) {
 
 fn update_attack_state(
     input: Res<ButtonInput<KeyCode>>,
-    query: Query<(Entity, &mut AttackState, &AerialState, &Transform), With<MainCharacter>>,
+    query: Query<(
+        Entity,
+        &mut MainCharacter,
+        &mut AttackState,
+        &AerialState,
+        &Transform,
+    )>,
     mut cast_spell: MessageWriter<SpawnSpellVoid>,
     cursor_target: Res<CursorTargetPosition>,
-    mut udp: ResMut<Udp>,
 ) {
-    for (entity, mut attack_state, aerial, pos) in query {
+    for (entity, mut character, mut attack_state, aerial, pos) in query {
         if *attack_state == AttackState::None && *aerial == AerialState::Grounded {
             let mut attack = None;
             if input.pressed(KeyCode::KeyQ) {
@@ -44,11 +49,11 @@ fn update_attack_state(
             }
 
             if let Some(ty) = attack {
-                udp.write_action(PlayerAction::Attack {
-                    ty,
-                    translation: pos.translation.to_array(),
-                    rotation: pos.rotation.to_array(),
-                });
+                // character.add_action(PlayerAction::Attack {
+                //     ty,
+                //     translation: pos.translation.to_array(),
+                //     rotation: pos.rotation.to_array(),
+                // });
                 *attack_state = AttackState::Attacking {
                     timer: Timer::new(ty.duration(), TimerMode::Once),
                     ty,

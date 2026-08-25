@@ -4,16 +4,16 @@ pub fn plugin(_app: &mut App) {}
 
 #[derive(Default)]
 pub struct ConnectedClients {
-    client_entities: HashMap<ClientId, Entity>,
     addr_clients: HashMap<SocketAddr, ConnectedClient>,
     client_addrs: HashMap<ClientId, SocketAddr>,
     pending_action_broadcasts: Vec<(ClientId, PlayerActionBroadcast)>,
 }
 
-struct ConnectedClient {
-    id: ClientId,
-    last_processed_action: u16,
-    pending_messages: VecDeque<UdpMsgToClient>,
+pub struct ConnectedClient {
+    pub id: ClientId,
+    pub entity: Entity,
+    pub last_processed_action: u16,
+    pub pending_messages: VecDeque<UdpMsgToClient>,
 }
 
 impl ConnectedClients {
@@ -25,12 +25,12 @@ impl ConnectedClients {
         entity: Entity,
         translation: [f32; 3],
     ) {
-        self.client_entities.insert(id, entity);
         self.client_addrs.insert(id, addr);
         self.addr_clients.insert(
             addr,
             ConnectedClient {
                 id,
+                entity,
                 last_processed_action,
                 pending_messages: VecDeque::new(),
             },
@@ -49,16 +49,9 @@ impl ConnectedClients {
         self.pending_action_broadcasts.push((client_id, action));
     }
 
-    pub fn update_last_msg(
-        &mut self,
-        last_processed_msg: u16,
-        addr: &SocketAddr,
-    ) -> Option<ClientId> {
+    pub fn get_mut(&mut self, addr: &SocketAddr) -> Option<&mut ConnectedClient> {
         debug_assert!(self.addr_clients.contains_key(addr));
-        self.addr_clients.get_mut(addr).map(|client| {
-            client.last_processed_action = last_processed_msg;
-            client.id
-        })
+        self.addr_clients.get_mut(addr)
     }
 
     pub fn flush_pending_messages(
@@ -68,9 +61,10 @@ impl ConnectedClients {
     ) {
         for mut com in udp.iter_mut() {
             let Some(ConnectedClient {
-                id,
                 last_processed_action,
                 pending_messages,
+                id,
+                ..
             }) = self.addr_clients.get_mut(&com.addr)
             else {
                 continue;
@@ -93,10 +87,6 @@ impl ConnectedClients {
         self.pending_action_broadcasts.clear();
     }
 
-    pub fn get_client_entity(&self, client_id: &ClientId) -> Option<Entity> {
-        self.client_entities.get(client_id).copied()
-    }
-
     pub fn remove(&mut self, addr: SocketAddr) -> Option<Entity> {
         let client = self.addr_clients.remove(&addr)?;
         self.client_addrs.remove(&client.id).unwrap();
@@ -109,7 +99,7 @@ impl ConnectedClients {
                 .push_back(UdpMsgToClient::PlayerDisconnected { id: client.id })
         }
 
-        self.client_entities.remove(&client.id)
+        Some(client.entity)
     }
 }
 

@@ -7,10 +7,9 @@ pub struct PlayerMovementQueue(VecDeque<PlayerMovement>);
 
 #[derive(Debug)]
 pub struct PlayerMovement {
-    pub origin: Vec3,
     pub direction: Vec2,
-    pub destination: Vec3,
     pub timer: Timer,
+    pub action_id: u16,
 }
 
 pub fn plugin(app: &mut App) {
@@ -18,57 +17,54 @@ pub fn plugin(app: &mut App) {
     app.add_systems(ServerBroadcast, movement_broadcast);
 }
 
-const MAX_MOVEMENT_INACCURACY: f32 = 0.05;
-
 fn movement_simulation(
     time: Res<Time>,
+    mut udp: ResMut<Udp>,
     query: Query<(
         &mut PlayerMovementQueue,
         &mut PlayerBroadcast,
-        &mut Transform,
         &mut LinearVelocity,
+        &Transform,
+        &ClientAddr,
     )>,
 ) {
-    for (mut queue, mut broadcast, mut pos, mut vel) in query {
-        if let Some(PlayerMovement {
-            origin,
+    for (mut queue, mut broadcast, mut vel, pos, addr) in query {
+        while let Some(PlayerMovement {
             direction,
-            destination,
             timer,
+            action_id,
         }) = queue.get_mut(0)
         {
+            let start = timer.elapsed().is_zero();
+
             broadcast.movement_changed = true;
             timer.tick(time.delta());
-            if timer.is_finished() {
-                if destination.distance(pos.translation.with_y(0.)) * timer.duration().as_secs_f32()
-                    < MAX_MOVEMENT_INACCURACY
-                {
-                    // pos.translation.x = destination.x;
-                    // pos.translation.z = destination.z;
-                } else {
-                    warn!(
-                        "client send invalid movement: inaccuracy is {}m, per duration: {}, client moved by {:?}, but I say {:?}, duration: {}ms",
-                        (destination.distance(pos.translation.with_y(0.)) * 1000.).round() / 1000.,
-                        (destination.distance(pos.translation.with_y(0.))
-                            / timer.duration().as_secs_f32()
-                            * 100.)
-                            .round()
-                            / 100.,
-                        *destination - *origin,
-                        pos.translation.with_y(0.) - *origin,
-                        timer.duration().as_millis()
-                    );
+
+            if timer.is_finished() && !start {
+                // let server_broadcast_tick_id = udp.server_broadcast_tick_id;
+                if let Some(client) = udp.clients.get_mut(addr) {
+                    client.last_processed_action = *action_id;
+                    // client
+                    //     .pending_messages
+                    //     .push_back(UdpMsgToClient::PlayerAction {
+                    //         client_id: client.id,
+                    //         last_processed_action: client.last_processed_action,
+                    //         server_broadcast_tick_id,
+                    //         action: PlayerActionBroadcast::Movement {
+                    //             destination: pos.translation.to_array(),
+                    //             just_started: broadcast.first_movement_after_idle,
+                    //         },
+                    //     });
                 }
-                // TODO! only do it when below MAX_MOVEMENT_INACCURACY
-                pos.translation.x = destination.x;
-                pos.translation.z = destination.z;
                 queue.pop_front();
                 vel.x = 0.;
                 vel.z = 0.;
                 continue;
             }
+
             vel.x = direction.x * MOVEMENT_SPEED;
             vel.z = direction.y * MOVEMENT_SPEED;
+            break;
         }
     }
 }

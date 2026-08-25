@@ -9,7 +9,6 @@ pub enum Item {
     SpawnGoblin(ItemSpawnGoblin),
     SpawnTwoGoblins(ItemSpawnTwoGoblins),
     SpawnGoblinsRandom(ItemSpawnGoblinsRandom),
-    RespawnPlayer(ItemRespawnPlayer),
 }
 
 #[delegatable_trait]
@@ -41,7 +40,7 @@ impl ItemEffect for ItemSpawnGoblin {
     }
 }
 
-fn spawn_goblin(mut commands: Commands, player: Query<&Transform, With<MainCharacter>>) {
+fn spawn_goblin(mut commands: Commands, player: Query<&Transform, With<Player>>) {
     let Ok(transform) = player.single() else {
         warn!("Can't spawn goblin in front of player: MainCharacter not found");
         return;
@@ -77,20 +76,4 @@ fn random_spawn_goblins(mut commands: Commands) {
         let z = rng.random_range(-50_f32..50_f32);
         commands.spawn((Goblin, Transform::from_translation(Vec3::new(x, 1., z))));
     }
-}
-
-#[derive(Reflect, Debug)]
-pub struct ItemRespawnPlayer;
-
-impl ItemEffect for ItemRespawnPlayer {
-    fn use_effect(&mut self, commands: &mut Commands) {
-        commands.run_system_cached(respawn_player);
-    }
-}
-
-fn respawn_player(mut commands: Commands, query: Query<Entity, With<MainCharacter>>) {
-    for entity in query {
-        commands.entity(entity).despawn();
-    }
-    commands.spawn((MainCharacter, Transform::from_translation(Vec3::Y)));
 }

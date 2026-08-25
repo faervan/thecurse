@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(ByteRepr, Debug, Clone)]
+#[derive(ByteRepr, Debug, Clone, Reflect)]
 pub enum UdpMsgToServer {
     Connect(ClientId),
     Disconnect,

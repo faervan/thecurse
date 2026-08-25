@@ -49,7 +49,7 @@ fn read_server_messages(
                         client_id,
                     } = msg
                     {
-                        con.client_id = Some(client_id);
+                        con.client_id = Some((client_id, commands.spawn_empty().id()));
                         udp.write(UdpMsgToServer::Connect(client_id));
                         let result = WorldDeserializer {
                             type_registry: &type_registry.read(),

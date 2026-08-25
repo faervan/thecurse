@@ -8,11 +8,6 @@ pub use actions::*;
 #[component(on_add = <Player as IsCreature>::on_add)]
 pub struct Player;
 
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-#[require(Player, AerialState, MovementState, AttackState)]
-pub struct MainCharacter;
-
 impl IsCreature for Player {
     const NAME: &str = "Player";
     const MAX_HEALTH: f32 = 20.;

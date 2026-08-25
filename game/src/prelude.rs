@@ -27,4 +27,4 @@ pub use crate::hud::health_bar::ShowHealthBar;
 
 pub use crate::weapon::{WeaponColliderHandle, WeaponSocketHandle};
 
-pub use crate::player::cursor_target::CursorTargetPosition;
+pub use crate::player::{MainCharacter, cursor_target::CursorTargetPosition};
