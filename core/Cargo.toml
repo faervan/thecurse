@@ -23,7 +23,6 @@ avian3d.workspace = true
 vleue_navigator.workspace = true
 
 serde.workspace = true
-postcard.workspace = true
 smol.workspace = true
 futures.workspace = true
 
@@ -31,6 +30,7 @@ thiserror.workspace = true
 bitflags.workspace = true
 rand.workspace = true
 ambassador.workspace = true
+clap.workspace = true
 
 [lints]
 workspace = true

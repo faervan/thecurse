@@ -17,7 +17,7 @@ dev = [
 dreamgame_core.workspace = true
 dreamgame_server.workspace = true
 
-bevy.workspace = true
+bevy = { workspace = true, features = ["3d", "ui", "audio"] }
 avian3d = { workspace = true, features = [
   "collider-from-mesh",
   "bevy_scene",
@@ -33,9 +33,6 @@ bevy-inspector-egui = { workspace = true, optional = true }
 
 smol.workspace = true
 futures.workspace = true
-
-rand.workspace = true
-clap.workspace = true
 
 [lints]
 workspace = true

@@ -13,13 +13,9 @@ dreamgame_core.workspace = true
 
 bevy.workspace = true
 
-postcard.workspace = true
 smol.workspace = true
 event-listener.workspace = true
 futures.workspace = true
-
-rand.workspace = true
-clap.workspace = true
 
 [lints]
 workspace = true
