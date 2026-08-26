@@ -31,6 +31,7 @@ thiserror.workspace = true
 bitflags.workspace = true
 rand.workspace = true
 ambassador.workspace = true
+clap.workspace = true
 
 [lints]
 workspace = true

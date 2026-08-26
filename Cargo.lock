@@ -2688,6 +2688,7 @@ dependencies = [
  "avian3d",
  "bevy",
  "bitflags 2.13.1",
+ "clap",
  "futures",
  "mini_udp",
  "postcard",
@@ -2709,11 +2710,9 @@ dependencies = [
  "bevy_enhanced_input",
  "bevy_hanabi",
  "bevy_skein",
- "clap",
  "dreamgame_core",
  "dreamgame_server",
  "futures",
- "rand",
  "smol",
  "vleue_navigator",
 ]
@@ -2723,12 +2722,10 @@ name = "dreamgame_server"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "clap",
  "dreamgame_core",
  "event-listener",
  "futures",
  "postcard",
- "rand",
  "smol",
 ]
 

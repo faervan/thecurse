@@ -34,8 +34,5 @@ bevy-inspector-egui = { workspace = true, optional = true }
 smol.workspace = true
 futures.workspace = true
 
-rand.workspace = true
-clap.workspace = true
-
 [lints]
 workspace = true

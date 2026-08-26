@@ -18,8 +18,5 @@ smol.workspace = true
 event-listener.workspace = true
 futures.workspace = true
 
-rand.workspace = true
-clap.workspace = true
-
 [lints]
 workspace = true
