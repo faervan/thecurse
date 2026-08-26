@@ -1,11 +1,11 @@
 [package]
-name = "thecurse_core"
+name = "dreamgame_core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 
 [features]
-default = ["game"]
+default = []
 
 dev = [
   "bevy/dynamic_linking",
@@ -13,10 +13,7 @@ dev = [
   "bevy/track_location",
   # Enables hot reload for in-memory asset providers
   "bevy/embedded_watcher",
-  # Needed for https://github.com/Lommix/bevy_inspector.nvim
-  "bevy/bevy_remote",
 ]
-game = ["bevy/3d", "bevy/ui"]
 
 [dependencies]
 mini_udp.workspace = true
@@ -25,16 +22,15 @@ bevy.workspace = true
 avian3d.workspace = true
 vleue_navigator.workspace = true
 
+serde.workspace = true
+postcard.workspace = true
+smol.workspace = true
+futures.workspace = true
+
 thiserror.workspace = true
 bitflags.workspace = true
 rand.workspace = true
 ambassador.workspace = true
-
-serde.workspace = true
-ron.workspace = true
-postcard.workspace = true
-smol.workspace = true
-futures.workspace = true
 
 [lints]
 workspace = true

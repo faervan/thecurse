@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "game", "editor", "server"]
+members = ["core", "game", "server"]
 resolver = "3"
 
 [workspace.package]
@@ -8,7 +8,9 @@ edition = "2024"
 authors = ["faervan <faervan@proton.me>"]
 
 [workspace.dependencies]
-thecurse_core = { path = "core", default-features = false }
+dreamgame_core = { path = "core", default-features = false }
+dreamgame_server = { path = "server", default-features = false }
+
 mini_udp = "0.4"
 
 # Bevy & plugins
@@ -27,17 +29,14 @@ avian3d = { version = "0.7", default-features = false, features = [
   "simd",
   "serialize",
 ] }
+bevy_enhanced_input = "0.26"
 bevy_skein.version = "0.6"
-vleue_navigator = { version = "0.15", default-features = false, features = [
+vleue_navigator = { version = "0.16", default-features = false, features = [
   "avian3d",
   "detailed-layers",
 ] }
-bevy_console = "0.18"
-
-# Dev dependencies
-egui = "0.34"
-egui_dock = "0.19"
-bevy_egui.version = "0.40"
+bevy_hanabi = { version = "0.19", default-features = false, features = ["3d"] }
+bevy_easings = "0.19"
 bevy-inspector-egui.version = "0.37"
 
 # Logging
@@ -53,8 +52,7 @@ tracing = { version = "0.1", features = [
 
 # Networking
 serde = { version = "1", features = ["derive"] }
-ron = "0.12"
-postcard = { version = "1.1", features = ["experimental-derive", "alloc"] }
+postcard = { version = "1.1", features = ["alloc"] }
 smol = "2.0"
 event-listener = "5.4"
 futures = "0.3"
@@ -64,11 +62,7 @@ thiserror = "2"
 bitflags = "2.10"
 rand = "0.10"
 ambassador = "0.5"
-clap = { version = "4.5", features = ["derive"] }
-
-[patch.crates-io]
-vleue_navigator = { git = "https://github.com/vleue/vleue_navigator.git" }
-bevy-inspector-egui = { git = "https://github.com/taboky-dev/bevy-inspector-egui.git", branch = "update_bevy_egui" }
+clap = { version = "4.6", features = ["derive"] }
 
 [workspace.lints.rust]
 # Mark `bevy_lint` as a valid `cfg`, as it is set when the Bevy linter runs.

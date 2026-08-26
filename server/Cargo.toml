@@ -1,24 +1,25 @@
 [package]
-name = "thecurse_server"
+name = "dreamgame_server"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 
 [features]
 default = ["dev"]
-dev = ["thecurse_core/dev"]
+dev = ["dreamgame_core/dev"]
 
 [dependencies]
-thecurse_core.workspace = true
-bevy.workspace = true
+dreamgame_core.workspace = true
 
-thiserror.workspace = true
-clap.workspace = true
+bevy.workspace = true
 
 postcard.workspace = true
 smol.workspace = true
 event-listener.workspace = true
 futures.workspace = true
+
+rand.workspace = true
+clap.workspace = true
 
 [lints]
 workspace = true
