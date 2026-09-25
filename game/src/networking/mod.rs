@@ -82,5 +82,12 @@ impl Udp {
 
 fn tick_udp(mut udp: ResMut<Udp>) {
     udp.com.recv();
-    udp.com.send().unwrap();
+    if let Err(e) = udp.com.send() {
+        match e {
+            MiniUdpError::NotConnected => {}
+            _ => {
+                error!("{e}");
+            }
+        }
+    }
 }

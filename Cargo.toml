@@ -11,7 +11,8 @@ authors = ["faervan <faervan@proton.me>"]
 dreamgame_core = { path = "core", default-features = false }
 dreamgame_server = { path = "server", default-features = false }
 
-mini_udp = "0.5"
+# mini_udp = "0.5"
+mini_udp.git = "https://codeberg.org/faervan/mini_udp.git"
 
 # Bevy & plugins
 bevy = { version = "0.19", default-features = false, features = [

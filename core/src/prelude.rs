@@ -3,7 +3,7 @@ pub use std::time::{Duration, Instant};
 
 pub use bevy::prelude::*;
 
-pub use mini_udp::{prelude::*, ring_buffer::RingBuffer};
+pub use mini_udp::{Error as MiniUdpError, prelude::*, ring_buffer::RingBuffer};
 
 pub use clap::{self, Parser};
 
