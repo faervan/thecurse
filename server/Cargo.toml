@@ -12,6 +12,7 @@ dev = ["dreamgame_core/dev"]
 dreamgame_core.workspace = true
 
 bevy.workspace = true
+avian3d.workspace = true
 
 smol.workspace = true
 event-listener.workspace = true
