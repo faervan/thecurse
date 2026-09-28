@@ -62,7 +62,7 @@ impl Udp {
     fn remove_stale_clients(&mut self, commands: &mut Commands) {
         self.inner.retain(|com| {
             if com.last_seen().elapsed() > Duration::from_secs(5) {
-                info!("Removing client {:?} due to inactivity", com.addr);
+                debug!("Removing client {:?} due to inactivity", com.addr);
                 if let Some(entity) = self.clients.remove(com.addr) {
                     commands.entity(entity).despawn();
                 } else {
@@ -75,12 +75,11 @@ impl Udp {
     }
 }
 
-fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
+fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&ClientId, &Transform)>) {
     let (com, clients) = udp.borrow_mut();
     com.recv(
         |mut com: UdpCommunicatorMut<_>, just_connected: JustConnected| {
             if *just_connected {
-                debug!("{:?} connected via UDP", com.addr);
                 let id = ClientId(clients.next_client_id);
                 clients.next_client_id = clients.next_client_id.wrapping_add(1);
 
@@ -89,7 +88,7 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                         // Player,
                         Name::new(format!("Player #{}", id.0)),
                         id,
-                        // ClientAddr(com.addr),
+                        ClientAddr(com.addr),
                         Transform::from_translation(Vec3::Y),
                         // PlayerMovementQueue::default(),
                         // PlayerBroadcast {
@@ -98,14 +97,26 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands) {
                         // },
                     ))
                     .id();
-                clients.insert(id, u16::MAX, com.addr, entity, Vec3::Y.to_array());
+
+                debug!("{:?} connected as {id:?}, {entity}", com.addr);
+                clients.insert(id, com.addr, entity, Vec3::Y.to_array());
                 com.write_ordered(MsgToClient::Connected {
+                    id,
                     translation: Vec3::Y.to_array(),
                 });
+                for (id, pos) in players {
+                    com.write_ordered(MsgToClient::PlayerInfo {
+                        id: *id,
+                        translation: pos.translation.to_array(),
+                    });
+                }
                 return;
             }
-            while let Some(msg) = com.read_ordered() {
+            while let Some(msg) = com.read_ordered().or_else(|| com.read()) {
                 match msg {
+                    MsgToServer::Ping { id } => {
+                        com.write(MsgToClient::PingResponse { id });
+                    }
                     MsgToServer::Disconnect => {
                         debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
                         if let Some(entity) = clients.remove(com.addr) {

@@ -131,13 +131,12 @@ where
     )
 }
 
-fn text(text: impl ToString, size: f32, bundle: impl Bundle) -> impl Bundle {
+fn text(text: impl ToString, size: f32) -> impl Bundle {
     (
         Name::new("Text"),
         Text(text.to_string()),
         TextFont::from_font_size(size),
         TextColor(Color::WHITE),
         Pickable::IGNORE,
-        bundle,
     )
 }

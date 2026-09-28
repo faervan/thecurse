@@ -18,21 +18,36 @@ fn build_hud(mut commands: Commands) {
     commands.spawn((
         root_node(
             "HUD Root",
-            JustifyContent::Center,
-            AlignContent::Start,
+            JustifyContent::Start,
+            AlignContent::End,
             FlexDirection::Column,
             px(8),
-            UiRect::horizontal(percent(10)),
+            UiRect::axes(px(20), px(10)),
         ),
         DespawnOnExit(AppState::Game),
-        children![text(
-            "State: Disconnected\nLast seen: 0ms ago",
-            26.,
-            UdpState
+        children![(
+            text("State: Disconnected\nLast seen: 0ms ago", 26.,),
+            UdpState,
+            Node {
+                right: Val::ZERO,
+                align_self: AlignSelf::End,
+                ..Default::default()
+            }
         )],
     ));
 }
 
-fn update_state(udp: Res<Udp>, mut text: Single<&mut Text, With<UdpState>>) {
-    text.0 = udp.debug_state();
+fn update_state(
+    udp: Res<Udp>,
+    mut text: Single<&mut Text, With<UdpState>>,
+    time: Res<Time>,
+    mut timer: Local<Timer>,
+) {
+    if timer.duration().is_zero() {
+        *timer = Timer::new(Duration::from_millis(100), TimerMode::Repeating);
+    }
+    timer.tick(time.delta());
+    if timer.just_finished() {
+        text.0 = udp.debug_state();
+    }
 }

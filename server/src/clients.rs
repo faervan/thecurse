@@ -20,7 +20,6 @@ impl ConnectedClients {
     pub fn insert(
         &mut self,
         id: ClientId,
-        last_processed_action: u16,
         addr: SocketAddr,
         entity: Entity,
         translation: [f32; 3],
@@ -31,7 +30,7 @@ impl ConnectedClients {
             ConnectedClient {
                 id,
                 entity,
-                last_processed_action,
+                last_processed_action: u16::MAX,
                 pending_messages: VecDeque::new(),
             },
         );

@@ -5,4 +5,4 @@ pub use dreamgame_core::prelude::*;
 
 pub use crate::networking::Udp;
 pub use crate::settings::GameSettings;
-pub use crate::state::AppState;
+pub use crate::state::{AppState, Connected};
