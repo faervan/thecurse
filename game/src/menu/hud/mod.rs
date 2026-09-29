@@ -1,7 +1,4 @@
-use crate::{
-    menu::{root_node, text},
-    prelude::*,
-};
+use crate::{menu::text, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(AppState::Game), build_hud);
@@ -13,21 +10,24 @@ pub(super) fn plugin(app: &mut App) {
 struct UdpState;
 
 fn build_hud(mut commands: Commands) {
-    commands.spawn((Camera2d, DespawnOnExit(AppState::Game)));
+    commands.spawn((Camera2d, DespawnOnExit(Connected(false))));
 
     commands.spawn((
-        root_node(
-            "HUD Root",
-            JustifyContent::Start,
-            AlignContent::End,
-            FlexDirection::Column,
-            px(8),
-            UiRect::axes(px(20), px(10)),
-        ),
+        Name::new("HUD Root"),
+        Node {
+            width: percent(100),
+            height: percent(100),
+            justify_content: JustifyContent::Start,
+            align_content: AlignContent::End,
+            flex_direction: FlexDirection::Column,
+            padding: UiRect::axes(px(20), px(10)),
+            ..Default::default()
+        },
         DespawnOnExit(AppState::Game),
         children![(
-            text("State: Disconnected\nLast seen: 0ms ago", 18.,),
+            text("", 18.,),
             UdpState,
+            TextLayout::justify(Justify::End),
             Node {
                 right: Val::ZERO,
                 align_self: AlignSelf::End,

@@ -85,7 +85,7 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&Clien
 
                 let entity = commands
                     .spawn((
-                        // Player,
+                        Player,
                         Name::new(format!("Player #{}", id.0)),
                         id,
                         ClientAddr(com.addr),

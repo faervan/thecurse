@@ -1,6 +1,9 @@
 use crate::prelude::*;
 
+pub mod collision_layer;
+pub mod environment;
 pub mod networking;
+pub mod player;
 pub mod prelude;
 
 pub fn asset_plugin() -> AssetPlugin {

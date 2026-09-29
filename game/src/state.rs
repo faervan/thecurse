@@ -64,10 +64,11 @@ fn set_connected_state(
     state: Res<State<Connected>>,
     udp: Res<Udp>,
 ) {
+    let is_connected = udp.state().is_connected();
     let state_is_connected = state.get().0;
-    if udp.state().is_connected() && !state_is_connected {
+    if is_connected && !state_is_connected {
         next_state.set(Connected(true));
-    } else if state_is_connected {
+    } else if !is_connected && state_is_connected {
         next_state.set(Connected(false));
     }
 }

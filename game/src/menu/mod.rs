@@ -12,7 +12,7 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 fn build_main_menu(mut commands: Commands) {
-    commands.spawn((Camera2d, DespawnOnExit(AppState::Menu)));
+    commands.spawn((Camera2d, IsDefaultUiCamera, DespawnOnExit(AppState::Menu)));
 
     commands.spawn((
         root_node(

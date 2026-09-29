@@ -1,4 +1,5 @@
 use crate::{
+    environment::rasterized_grid_obj_scene,
     networking::action_queue::{PlayerAction, PlayerActionQueue},
     prelude::*,
 };
@@ -133,12 +134,9 @@ fn tick_udp(
             MsgToClient::Connected { id, translation } => {
                 let translation = Vec3::from_array(translation);
                 let entity = commands
-                    .spawn((
-                        // MainCharacter::new(translation),
-                        id,
-                        Transform::from_translation(translation),
-                    ))
+                    .spawn((MainCharacter, id, Transform::from_translation(translation)))
                     .id();
+                commands.run_system_cached(rasterized_grid_obj_scene.pipe(spawn_obj_scene));
                 debug!("Connected as {id:?}, {entity}");
                 commands.insert_resource(ConnectionInfo::new(id, entity));
             }
@@ -175,11 +173,7 @@ fn spawn_player(
 ) {
     let translation = Vec3::from_array(translation);
     let entity = commands
-        .spawn((
-            //Player,
-            id,
-            Transform::from_translation(translation),
-        ))
+        .spawn((ScriptedPlayer, id, Transform::from_translation(translation)))
         .id();
     debug!("Spawning player {id:?} as {entity}");
     con.clients.insert(id, entity);
