@@ -1,13 +1,12 @@
 use crate::{
-    networking::{
-        action_queue::{PlayerAction, PlayerActionQueue},
-        con_info::ConnectionInfo,
-    },
+    networking::action_queue::{PlayerAction, PlayerActionQueue},
     prelude::*,
 };
 
 mod action_queue;
 mod con_info;
+
+pub use con_info::ConnectionInfo;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_resource::<NewPlayerActions>();

@@ -17,4 +17,15 @@ impl ConnectionInfo {
             clients: HashMap::new(),
         }
     }
+
+    pub fn debug_state(&self) -> String {
+        let main_character = format!("You (#{}), {}", self.client_id.0, self.entity);
+        let clients = self
+            .clients
+            .iter()
+            .map(|(id, entity)| format!("Client #{}, {entity}", id.0))
+            .collect::<Vec<String>>()
+            .join("\n");
+        [main_character, clients].join("\n")
+    }
 }

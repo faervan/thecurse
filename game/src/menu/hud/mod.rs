@@ -26,7 +26,7 @@ fn build_hud(mut commands: Commands) {
         ),
         DespawnOnExit(AppState::Game),
         children![(
-            text("State: Disconnected\nLast seen: 0ms ago", 26.,),
+            text("State: Disconnected\nLast seen: 0ms ago", 18.,),
             UdpState,
             Node {
                 right: Val::ZERO,
@@ -39,6 +39,7 @@ fn build_hud(mut commands: Commands) {
 
 fn update_state(
     udp: Res<Udp>,
+    con: Option<Res<ConnectionInfo>>,
     mut text: Single<&mut Text, With<UdpState>>,
     time: Res<Time>,
     mut timer: Local<Timer>,
@@ -49,5 +50,9 @@ fn update_state(
     timer.tick(time.delta());
     if timer.just_finished() {
         text.0 = udp.debug_state();
+        if let Some(con) = con {
+            text.0.push('\n');
+            text.0.push_str(&con.debug_state());
+        }
     }
 }
