@@ -123,7 +123,6 @@ where
                         Text(text),
                         TextFont::from_font_size(40.0),
                         TextColor(Color::BLACK),
-                        Pickable::IGNORE,
                     )],
                 ))
                 .observe(action);
@@ -137,6 +136,5 @@ fn text(text: impl ToString, size: f32) -> impl Bundle {
         Text(text.to_string()),
         TextFont::from_font_size(size),
         TextColor(Color::WHITE),
-        Pickable::IGNORE,
     )
 }

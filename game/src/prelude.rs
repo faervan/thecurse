@@ -6,6 +6,6 @@ pub use dreamgame_core::prelude::*;
 pub use crate::camera::{CameraController, CameraControllerAnchor};
 pub use crate::environment::spawn_obj_scene;
 pub use crate::networking::{ConnectionInfo, Udp};
-pub use crate::player::{MainCharacter, ScriptedPlayer};
+pub use crate::player::{MainCharacter, ScriptedPlayer, cursor_target::CursorTargetPosition};
 pub use crate::settings::GameSettings;
 pub use crate::state::{AppState, Connected};

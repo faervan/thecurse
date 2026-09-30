@@ -39,7 +39,19 @@ fn main() {
     app.add_plugins((
         bevy_skein::SkeinPlugin::default(),
         PhysicsPlugins::default(),
+        PhysicsPickingPlugin,
     ));
+
+    app.insert_resource(MeshPickingSettings {
+        require_markers: true,
+        ..Default::default()
+    });
+    app.insert_resource(UiPickingSettings {
+        require_markers: true,
+    });
+    app.insert_resource(PhysicsPickingSettings {
+        require_markers: true,
+    });
 
     // Custom plugins
     app.add_plugins((
@@ -49,6 +61,7 @@ fn main() {
         camera::plugin,
         debug::plugin,
         networking::plugin,
+        player::plugin,
     ));
     app.run();
 }

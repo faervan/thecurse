@@ -99,6 +99,7 @@ fn spawn_camera(mut commands: Commands, settings: Res<CameraControllerSettings>)
         Children [
             CameraController
             Camera3d::default()
+            PhysicsPickable
             IsDefaultUiCamera
             DepthPrepass
             Bloom::NATURAL

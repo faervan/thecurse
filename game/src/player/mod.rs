@@ -1,8 +1,14 @@
 use crate::prelude::*;
 
+pub mod cursor_target;
+
+pub(super) fn plugin(app: &mut App) {
+    app.add_plugins(cursor_target::plugin);
+}
+
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-#[require(PlayerCharacter)]
+#[require(Name::new("MainCharacter"), PlayerCharacter)]
 pub struct MainCharacter;
 
 #[derive(Component, Reflect)]

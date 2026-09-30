@@ -173,7 +173,12 @@ fn spawn_player(
 ) {
     let translation = Vec3::from_array(translation);
     let entity = commands
-        .spawn((ScriptedPlayer, id, Transform::from_translation(translation)))
+        .spawn((
+            Name::new(format!("Player #{}", id.0)),
+            ScriptedPlayer,
+            id,
+            Transform::from_translation(translation),
+        ))
         .id();
     debug!("Spawning player {id:?} as {entity}");
     con.clients.insert(id, entity);

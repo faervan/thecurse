@@ -52,6 +52,7 @@ pub fn rasterized_grid_obj_scene(
         Children [
             (
                 @RasterizedGridCollider
+                PhysicsPickable
             ),
             (
                 point_light_obj_scene()
