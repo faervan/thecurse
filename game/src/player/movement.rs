@@ -1,4 +1,4 @@
-use dreamgame_core::player::PLAYER_MOVEMENT_SPEED;
+use dreamgame_core::{helpers::approx_eq, player::PLAYER_MOVEMENT_SPEED};
 
 use crate::prelude::*;
 
@@ -8,12 +8,24 @@ pub(super) fn plugin(app: &mut App) {
 
 fn movement(
     input: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut con: ResMut<ConnectionInfo>,
     mut player: Query<(&mut LinearVelocity, &mut Transform, &mut MainCharacter)>,
     camera: Single<&Transform, (With<CameraController>, Without<MainCharacter>)>,
 ) {
-    let Ok((mut velocity, _player_pos, mut player)) = player.single_mut() else {
+    let Ok((mut velocity, player_pos, mut player)) = player.single_mut() else {
         return;
     };
+
+    let translation = player_pos.translation.to_array();
+    if !approx_eq(translation, con.predicted_future_state.translation) {
+        player.action_timer.tick(time.delta());
+        if player.action_timer.just_finished() {
+            con.add_action(PlayerAction::Movement {
+                destination: translation,
+            });
+        }
+    }
 
     let mut direction = Vec3::ZERO;
     if input.pressed(KeyCode::KeyW) {

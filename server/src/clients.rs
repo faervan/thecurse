@@ -13,17 +13,13 @@ pub struct ConnectedClient {
     pub id: ClientId,
     pub entity: Entity,
     pub last_processed_action: u16,
+    pub state: PlayerState,
+    pub unprocessed_actions: RingBuffer<PlayerAction, 64>,
     pub pending_messages: VecDeque<MsgToClient>,
 }
 
 impl ConnectedClients {
-    pub fn insert(
-        &mut self,
-        id: ClientId,
-        addr: SocketAddr,
-        entity: Entity,
-        translation: [f32; 3],
-    ) {
+    pub fn insert(&mut self, id: ClientId, addr: SocketAddr, entity: Entity, state: PlayerState) {
         self.client_addrs.insert(id, addr);
         self.addr_clients.insert(
             addr,
@@ -31,6 +27,8 @@ impl ConnectedClients {
                 id,
                 entity,
                 last_processed_action: u16::MAX,
+                state,
+                unprocessed_actions: RingBuffer::new(),
                 pending_messages: VecDeque::new(),
             },
         );
@@ -40,7 +38,7 @@ impl ConnectedClients {
             .for_each(|(_, client)| {
                 client
                     .pending_messages
-                    .push_back(MsgToClient::PlayerConnected { id, translation })
+                    .push_back(MsgToClient::PlayerConnected { id, state })
             });
     }
 
@@ -99,6 +97,12 @@ impl ConnectedClients {
         }
 
         Some(client.entity)
+    }
+}
+
+impl ConnectedClient {
+    pub fn read_action(&mut self, action_id: u16, action: PlayerAction) {
+        self.unprocessed_actions.insert(action_id, action);
     }
 }
 

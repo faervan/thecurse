@@ -7,11 +7,21 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((cursor_target::plugin, movement::plugin));
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect)]
 #[reflect(Component)]
 #[require(Name::new("MainCharacter"), PlayerCharacter)]
 pub struct MainCharacter {
     last_movement_direction: Vec3,
+    action_timer: Timer,
+}
+
+impl Default for MainCharacter {
+    fn default() -> Self {
+        Self {
+            last_movement_direction: Vec3::ZERO,
+            action_timer: Timer::new(Duration::from_millis(50), TimerMode::Repeating),
+        }
+    }
 }
 
 #[derive(Component, Reflect)]
@@ -28,7 +38,7 @@ struct PlayerCharacter;
 impl PlayerCharacter {
     fn on_add(mut world: DeferredWorld, hook: HookContext) {
         let mut meshes = world.resource_mut::<Assets<Mesh>>();
-        let mesh = meshes.add(Capsule3d::new(0.2, 1.94));
+        let mesh = meshes.add(Capsule3d::new(0.2, 1.7));
 
         let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
         let material = materials.add(StandardMaterial {

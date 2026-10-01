@@ -78,8 +78,8 @@ impl Udp {
 fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&ClientId, &Transform)>) {
     let (com, clients) = udp.borrow_mut();
     com.recv(
-        |mut com: UdpCommunicatorMut<_>, just_connected: JustConnected| {
-            if *just_connected {
+        |mut com: UdpCommunicatorMut<_>, mut con: ConnectionCommands| {
+            if com.just_connected() {
                 let id = ClientId(clients.next_client_id);
                 clients.next_client_id = clients.next_client_id.wrapping_add(1);
 
@@ -99,20 +99,36 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&Clien
                     .id();
 
                 debug!("{:?} connected as {id:?}, {entity}", com.addr);
-                clients.insert(id, com.addr, entity, Vec3::Y.to_array());
+                clients.insert(
+                    id,
+                    com.addr,
+                    entity,
+                    PlayerState {
+                        translation: Vec3::Y.to_array(),
+                    },
+                );
                 com.write_ordered(MsgToClient::Connected {
                     id,
-                    translation: Vec3::Y.to_array(),
+                    state: PlayerState {
+                        translation: Vec3::Y.to_array(),
+                    },
                 });
                 for (id, pos) in players {
                     com.write_ordered(MsgToClient::PlayerInfo {
                         id: *id,
-                        translation: pos.translation.to_array(),
+                        state: PlayerState {
+                            translation: pos.translation.to_array(),
+                        },
                     });
                 }
                 return;
             }
-            while let Some(msg) = com.read_ordered().or_else(|| com.read()) {
+
+            let client = clients.get_mut(&com.addr).expect(
+                "client is created if `just_connected` and this\
+                com is deleted when the client is removed.",
+            );
+            while let Some(msg) = com.read().or_else(|| com.read_ordered()) {
                 match msg {
                     MsgToServer::Ping { id } => {
                         com.write(MsgToClient::PingResponse { id });
@@ -121,7 +137,12 @@ fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&Clien
                         debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
                         if let Some(entity) = clients.remove(com.addr) {
                             commands.entity(entity).despawn();
+                            con.disconnect();
                         }
+                        break;
+                    }
+                    MsgToServer::Action { id, action } => {
+                        client.read_action(id, action);
                     }
                 }
             }

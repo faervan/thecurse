@@ -22,9 +22,9 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            send_ping.run_if(in_state(Connected(true))),
+            (send_ping, ConnectionInfo::send_actions).run_if(in_state(Connected(true))),
             tick_udp,
-            handle_new_actions.run_if(resource_exists::<ConnectionInfo>),
+            handle_new_actions.run_if(in_state(Connected(true))),
         )
             .chain()
             .run_if(in_state(AppState::Game)),
@@ -95,6 +95,10 @@ impl Udp {
         [state, last_seen, last_send, ping].join("\n")
     }
 
+    fn write_unreliable(&mut self, msg: MsgToServer) {
+        self.com.write(msg);
+    }
+
     pub fn disconnect(&mut self) {
         if self.com.state().is_connected() {
             info!("Sending disconnect notification to server");
@@ -107,17 +111,14 @@ impl Udp {
 #[derive(Resource, Debug, Default)]
 struct NewPlayerActions {
     actions: Vec<(ClientId, PlayerAction)>,
+    action_ack: Option<(u16, PlayerState)>,
     disconnects: Vec<ClientId>,
 }
 
-fn tick_udp(
-    mut udp: ResMut<Udp>,
-    mut new_actions: ResMut<NewPlayerActions>,
-    mut commands: Commands,
-) {
+fn tick_udp(mut udp: ResMut<Udp>, mut actions: ResMut<NewPlayerActions>, mut commands: Commands) {
     udp.com.recv();
 
-    while let Some(msg) = udp.com.read() {
+    while let Some(msg) = udp.com.read().or_else(|| udp.com.read_ordered()) {
         match msg {
             MsgToClient::PingResponse { id } => {
                 if let Some(send_instant) = udp.pending_pings.take(id) {
@@ -126,12 +127,17 @@ fn tick_udp(
                     debug!("Ping #{id} had a RTT longer than 800ms");
                 }
             }
-            _ => todo!(),
-        }
-    }
-    while let Some(msg) = udp.com.read_ordered() {
-        match msg {
-            MsgToClient::Connected { id, translation } => {
+            MsgToClient::PlayerAction {
+                id,
+                action_id,
+                action,
+            } => todo!(),
+            MsgToClient::ActionAck {
+                last_processed_action,
+                state,
+            } => actions.action_ack = Some((last_processed_action, state)),
+            MsgToClient::Connected { id, state } => {
+                let PlayerState { translation } = state;
                 let translation = Vec3::from_array(translation);
                 let entity = commands
                     .spawn((
@@ -142,21 +148,21 @@ fn tick_udp(
                     .id();
                 commands.run_system_cached(rasterized_grid_obj_scene.pipe(spawn_obj_scene));
                 debug!("Connected as {id:?}, {entity}");
-                commands.insert_resource(ConnectionInfo::new(id, entity));
+                commands.insert_resource(ConnectionInfo::new(id, entity, state));
+                commands.set_state_if_neq(Connected(true));
             }
-            MsgToClient::PlayerInfo { id, translation } => {
+            MsgToClient::PlayerInfo { id, state } => {
                 debug!("Player {id:?} is also connected");
-                commands.run_system_cached_with(spawn_player, (id, translation));
+                commands.run_system_cached_with(spawn_player, (id, state));
             }
-            MsgToClient::PlayerConnected { id, translation } => {
+            MsgToClient::PlayerConnected { id, state } => {
                 debug!("Player {id:?} send connect");
-                commands.run_system_cached_with(spawn_player, (id, translation));
+                commands.run_system_cached_with(spawn_player, (id, state));
             }
             MsgToClient::PlayerDisconnected { id } => {
                 debug!("Player {id:?} send disconnect");
-                new_actions.disconnects.push(id);
+                actions.disconnects.push(id);
             }
-            MsgToClient::PingResponse { .. } => error!("{msg:?} should be unreliable"),
         }
     }
 
@@ -171,10 +177,11 @@ fn tick_udp(
 }
 
 fn spawn_player(
-    In((id, translation)): In<(ClientId, [f32; 3])>,
+    In((id, state)): In<(ClientId, PlayerState)>,
     mut commands: Commands,
     mut con: ResMut<ConnectionInfo>,
 ) {
+    let PlayerState { translation } = state;
     let translation = Vec3::from_array(translation);
     let entity = commands
         .spawn((
@@ -207,6 +214,10 @@ fn handle_new_actions(
         {
             match action {}
         }
+    }
+
+    if let Some((last_processed_action, state)) = new_actions.action_ack.take() {
+        con.ack_action(last_processed_action, state);
     }
 }
 

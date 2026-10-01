@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 pub mod collision_layer;
 pub mod environment;
+pub mod helpers;
 pub mod networking;
 pub mod player;
 pub mod prelude;

@@ -9,16 +9,39 @@ pub const SERVER_TIMESTEP: Duration = Duration::from_micros(15625);
 #[derive(ByteRepr, Debug)]
 pub enum MsgToServer {
     Ping { id: u16 },
+    Action { id: u16, action: PlayerAction },
     Disconnect,
 }
 
 #[derive(ByteRepr, Debug)]
 pub enum MsgToClient {
-    PingResponse { id: u16 },
-    Connected { id: ClientId, translation: [f32; 3] },
-    PlayerInfo { id: ClientId, translation: [f32; 3] },
-    PlayerConnected { id: ClientId, translation: [f32; 3] },
-    PlayerDisconnected { id: ClientId },
+    PingResponse {
+        id: u16,
+    },
+    Connected {
+        id: ClientId,
+        state: PlayerState,
+    },
+    PlayerInfo {
+        id: ClientId,
+        state: PlayerState,
+    },
+    PlayerConnected {
+        id: ClientId,
+        state: PlayerState,
+    },
+    PlayerDisconnected {
+        id: ClientId,
+    },
+    PlayerAction {
+        id: ClientId,
+        action_id: u16,
+        action: PlayerAction,
+    },
+    ActionAck {
+        last_processed_action: u16,
+        state: PlayerState,
+    },
 }
 
 #[derive(ByteRepr, Component, Debug, Hash, PartialEq, Eq, Clone, Copy)]
