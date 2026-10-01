@@ -134,7 +134,11 @@ fn tick_udp(
             MsgToClient::Connected { id, translation } => {
                 let translation = Vec3::from_array(translation);
                 let entity = commands
-                    .spawn((MainCharacter, id, Transform::from_translation(translation)))
+                    .spawn((
+                        MainCharacter::default(),
+                        id,
+                        Transform::from_translation(translation),
+                    ))
                     .id();
                 commands.run_system_cached(rasterized_grid_obj_scene.pipe(spawn_obj_scene));
                 debug!("Connected as {id:?}, {entity}");

@@ -75,3 +75,17 @@ pub(super) fn rotate(
         }
     }
 }
+
+pub(super) fn follow_player(
+    player: Query<&Transform, With<MainCharacter>>,
+    mut camera: Query<&mut Transform, (With<CameraControllerAnchor>, Without<MainCharacter>)>,
+) {
+    let Ok(player_pos) = player.single() else {
+        return;
+    };
+    let Ok(mut camera_pos) = camera.single_mut() else {
+        return;
+    };
+
+    camera_pos.translation = player_pos.translation;
+}

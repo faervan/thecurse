@@ -1,15 +1,18 @@
 use crate::prelude::*;
 
 pub mod cursor_target;
+mod movement;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(cursor_target::plugin);
+    app.add_plugins((cursor_target::plugin, movement::plugin));
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Default)]
 #[reflect(Component)]
 #[require(Name::new("MainCharacter"), PlayerCharacter)]
-pub struct MainCharacter;
+pub struct MainCharacter {
+    last_movement_direction: Vec3,
+}
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]

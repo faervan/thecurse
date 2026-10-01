@@ -16,6 +16,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             movement::zoom,
             movement::rotate,
+            movement::follow_player,
             line_of_sight::enforce
                 .in_set(PhysicsSystems::Last)
                 .after(movement::zoom),

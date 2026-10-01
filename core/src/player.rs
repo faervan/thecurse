@@ -13,3 +13,5 @@ use crate::prelude::*;
     LockedAxes::ROTATION_LOCKED
 )]
 pub struct Player;
+
+pub const PLAYER_MOVEMENT_SPEED: f32 = 10.;
