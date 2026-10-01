@@ -3,10 +3,11 @@ use bevy::dev_tools::render_debug::{RenderDebugOverlayEvent, handle_input, updat
 use crate::prelude::*;
 
 mod inspector;
+mod overlay;
 mod physics;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((inspector::plugin, physics::plugin));
+    app.add_plugins((inspector::plugin, physics::plugin, overlay::plugin));
 
     app.add_systems(
         Update,
