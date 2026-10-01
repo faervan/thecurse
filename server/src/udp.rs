@@ -1,3 +1,6 @@
+use dreamgame_core::environment::EnvironmentObj;
+use mini_udp::context::{error_handlers::WarnOnError, resend_strategies::FixedResend};
+
 use crate::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -7,19 +10,37 @@ pub fn plugin(app: &mut App) {
     app.add_systems(AfterServerBroadcast, read_udp);
 }
 
+pub(crate) type UdpCfg = UdpConfig<
+    MsgToClient,
+    MsgToServer,
+    PROTOCOL_VERSION,
+    WarnOnError,
+    FixedResend,
+    (ClientId, Entity),
+>;
+
 #[derive(Resource, Debug)]
 pub struct Udp {
-    inner: MultiUdpCommunicator<UdpServerCfg>,
-    pub clients: ConnectedClients,
+    inner: MultiUdpCommunicator<UdpCfg>,
     pub server_broadcast_tick_id: u16,
 }
 
 impl Udp {
     fn new(settings: &ServerSettings) -> Self {
+        let client_data_init = {
+            let mut last_client_id = u64::MAX;
+            move |_addr| {
+                last_client_id = last_client_id.wrapping_add(1);
+                (ClientId(last_client_id), Entity::PLACEHOLDER)
+            }
+        };
         Self {
             inner: {
-                let mut com =
-                    MultiUdpCommunicator::<UdpServerCfg>::bind(("0.0.0.0", settings.port_udp));
+                let mut com = MultiUdpCommunicator::<UdpCfg>::bind_with(
+                    ("0.0.0.0", settings.port_udp),
+                    WarnOnError,
+                    client_data_init,
+                );
 
                 let resend_handler = com.get_resend_handler_mut();
                 // This is basically an arbitrary low interval, it is extended to
@@ -39,35 +60,51 @@ impl Udp {
                 }
                 com
             },
-            clients: ConnectedClients::default(),
             server_broadcast_tick_id: 0,
         }
     }
 
-    pub fn borrow_mut(
-        &mut self,
-    ) -> (
-        &mut MultiUdpCommunicator<UdpServerCfg>,
-        &mut ConnectedClients,
-    ) {
-        (&mut self.inner, &mut self.clients)
+    pub fn write_unreliable(&mut self, msg: MsgToClient, addr: &SocketAddr) {
+        if let Some(mut com) = self.inner.get_mut(addr) {
+            com.write(msg);
+        } else {
+            warn!("Tried to write {msg:?} to {addr:?}, but it is not connected");
+        }
     }
 
-    fn flush_pending_messages(&mut self) {
-        self.clients
-            .flush_pending_messages(&mut self.inner, self.server_broadcast_tick_id);
-        self.server_broadcast_tick_id = self.server_broadcast_tick_id.wrapping_add(1);
+    pub fn broadcast_unreliable(&mut self, msg: MsgToClient) {
+        self.inner.for_each(|mut com| {
+            com.write(msg.clone());
+        });
+    }
+
+    pub fn broadcast_unreliable_except(&mut self, msg: MsgToClient, exception: ClientId) {
+        self.inner.for_each(|mut com| {
+            if com.data.0 != exception {
+                com.write(msg.clone());
+            }
+        });
+    }
+
+    pub fn broadcast_ordered(&mut self, msg: MsgToClient) {
+        self.inner.for_each(|mut com| {
+            com.write_ordered(msg.clone());
+        });
+    }
+
+    pub fn broadcast_ordered_except(&mut self, msg: MsgToClient, exception: ClientId) {
+        self.inner.for_each(|mut com| {
+            if com.data.0 != exception {
+                com.write_ordered(msg.clone());
+            }
+        });
     }
 
     fn remove_stale_clients(&mut self, commands: &mut Commands) {
         self.inner.retain(|com| {
             if com.last_seen().elapsed() > Duration::from_secs(5) {
                 debug!("Removing client {:?} due to inactivity", com.addr);
-                if let Some(entity) = self.clients.remove(com.addr) {
-                    commands.entity(entity).despawn();
-                } else {
-                    warn!("Failed to remove client: client does not exist anymore");
-                }
+                commands.entity(com.data.1).try_despawn();
                 return false;
             }
             true
@@ -75,59 +112,84 @@ impl Udp {
     }
 }
 
-fn read_udp(mut udp: ResMut<Udp>, mut commands: Commands, players: Query<(&ClientId, &Transform)>) {
-    let (com, clients) = udp.borrow_mut();
-    com.recv(
-        |mut com: UdpCommunicatorMut<_>, just_connected: JustConnected| {
-            if *just_connected {
-                let id = ClientId(clients.next_client_id);
-                clients.next_client_id = clients.next_client_id.wrapping_add(1);
+fn read_udp(
+    mut udp: ResMut<Udp>,
+    mut commands: Commands,
+    environment: Query<(&EnvironmentObj, &Transform), Without<Client>>,
+    mut players: Query<(&mut Client, &mut Transform)>,
+) {
+    let server_tick_id = udp.server_broadcast_tick_id;
+    udp.server_broadcast_tick_id = udp.server_broadcast_tick_id.wrapping_add(1);
+    udp.inner.for_each(|mut com| {
+        com.set_unreliable_packet_header_message(Some(MsgToClient::ServerTick { server_tick_id }))
+            .unwrap()
+    });
+
+    udp.inner.recv(
+        |mut com: UdpCommunicatorMut<UdpCfg>, mut con: ConnectionCommands| {
+            if com.just_connected() {
+                let id = com.data.0;
+                let state = PlayerState {
+                    translation: Vec3::Y.to_array(),
+                };
 
                 let entity = commands
-                    .spawn((
-                        Player,
-                        Name::new(format!("Player #{}", id.0)),
-                        id,
-                        ClientAddr(com.addr),
-                        Transform::from_translation(Vec3::Y),
-                        // PlayerMovementQueue::default(),
-                        // PlayerBroadcast {
-                        //     first_movement_after_idle: true,
-                        //     ..Default::default()
-                        // },
-                    ))
+                    .spawn_scene(Client::new(id, com.addr, state).into_scene())
                     .id();
+                com.data.1 = entity;
 
                 debug!("{:?} connected as {id:?}, {entity}", com.addr);
-                clients.insert(id, com.addr, entity, Vec3::Y.to_array());
                 com.write_ordered(MsgToClient::Connected {
                     id,
-                    translation: Vec3::Y.to_array(),
+                    state: PlayerState {
+                        translation: Vec3::Y.to_array(),
+                    },
                 });
-                for (id, pos) in players {
+                for (client, pos) in &players {
                     com.write_ordered(MsgToClient::PlayerInfo {
-                        id: *id,
+                        id: client.id,
+                        state: PlayerState {
+                            translation: pos.translation.to_array(),
+                        },
+                    });
+                }
+                for (obj, pos) in &environment {
+                    com.write_ordered(MsgToClient::EnvironmentObj {
+                        kind: *obj,
                         translation: pos.translation.to_array(),
                     });
                 }
                 return;
             }
-            while let Some(msg) = com.read_ordered().or_else(|| com.read()) {
+
+            let entity = com.data.1;
+            let Ok((mut client, _pos)) = players.get_mut(entity) else {
+                return;
+            };
+            while let Some(msg) = com.read().or_else(|| com.read_ordered()) {
                 match msg {
                     MsgToServer::Ping { id } => {
                         com.write(MsgToClient::PingResponse { id });
                     }
                     MsgToServer::Disconnect => {
                         debug!("Received msg {msg:?} from {:?} via UDP", com.addr);
-                        if let Some(entity) = clients.remove(com.addr) {
-                            commands.entity(entity).despawn();
-                        }
+                        commands.entity(entity).despawn();
+                        con.disconnect();
+                        break;
+                    }
+                    MsgToServer::Action { id, action } => {
+                        client.read_action(id, action);
                     }
                 }
             }
         },
     );
+
+    for (mut client, mut transform) in &mut players {
+        client.process_actions(&mut transform);
+        client.broadcast(&mut udp);
+    }
+
     udp.remove_stale_clients(&mut commands);
-    udp.flush_pending_messages();
     udp.inner.send();
 }

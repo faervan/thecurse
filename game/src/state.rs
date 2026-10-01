@@ -66,9 +66,7 @@ fn set_connected_state(
 ) {
     let is_connected = udp.state().is_connected();
     let state_is_connected = state.get().0;
-    if is_connected && !state_is_connected {
-        next_state.set(Connected(true));
-    } else if !is_connected && state_is_connected {
+    if !is_connected && state_is_connected {
         next_state.set(Connected(false));
     }
 }

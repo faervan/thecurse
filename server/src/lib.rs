@@ -2,7 +2,8 @@ use bevy::ecs::schedule::ScheduleLabel;
 
 use crate::prelude::*;
 
-pub mod clients;
+pub mod environment;
+pub mod player;
 pub mod prelude;
 pub mod udp;
 

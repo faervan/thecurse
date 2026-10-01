@@ -1,6 +1,13 @@
 use crate::prelude::*;
 
+#[derive(Component, Reflect, ByteRepr, Debug, Clone, Copy)]
+#[reflect(Component)]
+pub enum EnvironmentObj {
+    RasterizedGrid,
+}
+
 #[derive(SceneComponent, Default, Clone)]
+#[require(EnvironmentObj::RasterizedGrid)]
 pub struct RasterizedGridCollider;
 
 impl RasterizedGridCollider {

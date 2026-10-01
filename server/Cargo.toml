@@ -11,6 +11,8 @@ dev = ["dreamgame_core/dev"]
 [dependencies]
 dreamgame_core.workspace = true
 
+mini_udp.workspace = true
+
 bevy.workspace = true
 avian3d.workspace = true
 

@@ -60,7 +60,11 @@ fn main() -> AppExit {
         PhysicsInterpolationPlugin::default(),
     ));
 
-    app.add_plugins((dreamgame_server::udp::plugin));
+    app.add_plugins((
+        dreamgame_server::udp::plugin,
+        dreamgame_server::player::plugin,
+        dreamgame_server::environment::plugin,
+    ));
 
     app.run()
 }

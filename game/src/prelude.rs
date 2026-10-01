@@ -1,8 +1,8 @@
 pub use bevy::input::common_conditions::{input_just_pressed, input_toggle_active};
 
-pub use dreamgame_core::networking::UdpClientCfg;
 pub use dreamgame_core::prelude::*;
 
+pub use crate::GameEntity;
 pub use crate::camera::{CameraController, CameraControllerAnchor};
 pub use crate::environment::spawn_obj_scene;
 pub use crate::networking::{ConnectionInfo, Udp};

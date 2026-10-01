@@ -7,6 +7,7 @@ pub fn spawn_obj_scene(scene: In<Box<dyn Scene>>, mut commands: Commands) {
 }
 
 pub fn rasterized_grid_obj_scene(
+    In(translation): In<Vec3>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -45,13 +46,20 @@ pub fn rasterized_grid_obj_scene(
         ..Default::default()
     });
 
+    let mesh_offset = Vec3::new(0., 0.5, 0.);
+
     Box::new(bsn! {
         #RasterizedGridObj
+        GameEntity
+        Transform::from_translation(translation + mesh_offset)
         Mesh3d(mesh)
         MeshMaterial3d::<StandardMaterial>(material)
         Children [
             (
                 @RasterizedGridCollider
+                Transform {
+                    translation: {Vec3::ZERO - mesh_offset}
+                }
                 PhysicsPickable
             ),
             (
@@ -65,6 +73,7 @@ pub fn rasterized_grid_obj_scene(
 pub fn point_light_obj_scene() -> Box<dyn Scene> {
     Box::new(bsn! {
         #Light
+        GameEntity
         PointLight {
             intensity: 1_000_000.,
             range: 50.,

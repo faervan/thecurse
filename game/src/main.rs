@@ -65,3 +65,7 @@ fn main() {
     ));
     app.run();
 }
+
+#[derive(Component, Default, Debug, Clone, Copy)]
+#[require(DespawnOnExit::<Connected>(Connected(true)))]
+pub struct GameEntity;
