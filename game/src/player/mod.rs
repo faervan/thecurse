@@ -2,9 +2,13 @@ use crate::prelude::*;
 
 pub mod cursor_target;
 mod movement;
+mod scripted;
+
+const STATE_TRANSITION_DURATION: Duration =
+    Duration::from_micros(SERVER_TIMESTEP.as_micros() as u64 * 4);
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((cursor_target::plugin, movement::plugin));
+    app.add_plugins((cursor_target::plugin, movement::plugin, scripted::plugin));
 }
 
 #[derive(Component, Reflect)]
@@ -31,7 +35,36 @@ impl MainCharacter {
 #[require(PlayerCharacter)]
 pub struct ScriptedPlayer {
     pub id: ClientId,
-    pub authoritative_state: PlayerState,
+    last_known_server_tick_id: u16,
+    last_state: PlayerState,
+    next_state: Option<PlayerState>,
+    /// Stores the next state, as well as the count of server ticks since the last state
+    state_cache: VecDeque<(PlayerState, u32)>,
+    /// Timer for tracking the progress of a `last_state` -> `next_state` transition.
+    transition_timer: Timer,
+    /// Timer for building the cache when `next_state` is `None` and a new [`PlayerState`] has just
+    /// been received.
+    cache_timer: Timer,
+}
+
+impl ScriptedPlayer {
+    pub fn new(id: ClientId, state: PlayerState, server_tick_id: u16) -> Self {
+        Self {
+            id,
+            last_known_server_tick_id: server_tick_id,
+            last_state: state,
+            next_state: None,
+            state_cache: VecDeque::new(),
+            transition_timer: Timer::new(STATE_TRANSITION_DURATION, TimerMode::Once),
+            cache_timer: Timer::new(Duration::from_millis(50), TimerMode::Once),
+        }
+    }
+
+    pub fn push_state(&mut self, server_tick_id: u16, state: PlayerState) {
+        let diff = server_tick_id.wrapping_sub(self.last_known_server_tick_id) as u32;
+        self.last_known_server_tick_id = server_tick_id;
+        self.state_cache.push_back((state, diff));
+    }
 }
 
 #[derive(Component, Reflect, Default)]

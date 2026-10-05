@@ -114,7 +114,8 @@ impl Client {
             );
         }
 
-        if std::mem::take(&mut self.broadcast_state) {
+        // TODO! Add broadcast acks later
+        if std::mem::take(&mut self.broadcast_state) || true {
             udp.broadcast_unreliable_except(
                 MsgToClient::PlayerStateUpdate {
                     id: self.id,

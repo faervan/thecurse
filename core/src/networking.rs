@@ -24,6 +24,7 @@ pub enum MsgToClient {
     Connected {
         id: ClientId,
         state: PlayerState,
+        server_tick_id: u16,
     },
     EnvironmentObj {
         kind: EnvironmentObj,

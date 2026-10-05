@@ -144,6 +144,7 @@ fn read_udp(
                     state: PlayerState {
                         translation: Vec3::Y.to_array(),
                     },
+                    server_tick_id,
                 });
                 for (client, pos) in &players {
                     com.write_ordered(MsgToClient::PlayerInfo {

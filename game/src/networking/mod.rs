@@ -126,7 +126,7 @@ fn tick_udp(
     mut commands: Commands,
     mut connected_clients: ResMut<ConnectedClients>,
     mut con_info: Option<ResMut<ConnectionInfo>>,
-    mut players: Query<(&mut ScriptedPlayer, &mut Transform)>,
+    mut players: Query<&mut ScriptedPlayer>,
 ) {
     udp.com.recv();
 
@@ -177,14 +177,18 @@ fn tick_udp(
                     continue;
                 }
                 if let Some(entity) = connected_clients.get(&id)
-                    && let Ok((mut player, mut transform)) = players.get_mut(*entity)
+                    && let Ok(mut player) = players.get_mut(*entity)
                 {
-                    transform.translation = Vec3::from_array(state.translation);
-                    player.authoritative_state = state;
+                    player.push_state(udp.server_tick_id, state);
                 }
-                // TODO
             }
-            MsgToClient::Connected { id, state } => {
+            MsgToClient::Connected {
+                id,
+                state,
+                server_tick_id,
+            } => {
+                udp.server_tick_id = server_tick_id;
+
                 let PlayerState { translation } = state;
                 let translation = Vec3::from_array(translation);
                 let entity = commands
@@ -193,7 +197,7 @@ fn tick_udp(
                         Transform::from_translation(translation),
                     ))
                     .id();
-                debug!("Connected as {id:?}, {entity}");
+                debug!("Connected as {id}, {entity}");
                 commands.insert_resource(ConnectionInfo::new(id, entity, state));
                 commands.set_state_if_neq(Connected(true));
             }
@@ -206,17 +210,33 @@ fn tick_udp(
                 }
             },
             MsgToClient::PlayerInfo { id, state } => {
-                debug!("Player {id:?} is also connected");
-                spawn_player(&mut connected_clients, &mut commands, id, state);
+                debug!("Player {id} is also connected");
+                spawn_player(
+                    &mut connected_clients,
+                    &mut commands,
+                    id,
+                    state,
+                    // TODO! This server tick may be invalid, as this message can be read before
+                    // MsgToClient::Connected.
+                    udp.server_tick_id,
+                );
             }
             MsgToClient::PlayerConnected { id, state } => {
-                debug!("Player {id:?} send connect");
-                spawn_player(&mut connected_clients, &mut commands, id, state);
+                debug!("Player {id} send connect");
+                spawn_player(
+                    &mut connected_clients,
+                    &mut commands,
+                    id,
+                    state,
+                    // TODO! This server tick may be invalid, as this message can be read before
+                    // MsgToClient::Connected.
+                    udp.server_tick_id,
+                );
             }
             MsgToClient::PlayerDisconnected { id } => {
-                debug!("Player {id:?} send disconnect");
+                debug!("Player {id} send disconnect");
                 if let Some(entity) = connected_clients.remove(&id) {
-                    debug!("Despawning player {id:?}, {entity}");
+                    debug!("Despawning player {id}, {entity}");
                     commands.entity(entity).despawn();
                 }
             }
@@ -238,19 +258,17 @@ fn spawn_player(
     commands: &mut Commands,
     id: ClientId,
     state: PlayerState,
+    server_tick_id: u16,
 ) {
     let translation = Vec3::from_array(state.translation);
     let entity = commands
         .spawn((
-            Name::new(format!("Player #{}", id.0)),
+            Name::new(format!("Player {id}")),
             Transform::from_translation(translation),
-            ScriptedPlayer {
-                id,
-                authoritative_state: state,
-            },
+            ScriptedPlayer::new(id, state, server_tick_id),
         ))
         .id();
-    debug!("Spawning player {id:?} as {entity}");
+    debug!("Spawning player {id} as {entity}");
     mapping.insert(id, entity);
 }
 
