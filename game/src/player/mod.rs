@@ -11,13 +11,15 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Component)]
 #[require(Name::new("MainCharacter"), PlayerCharacter)]
 pub struct MainCharacter {
+    pub id: ClientId,
     last_movement_direction: Vec3,
     action_timer: Timer,
 }
 
-impl Default for MainCharacter {
-    fn default() -> Self {
+impl MainCharacter {
+    pub fn new(id: ClientId) -> Self {
         Self {
+            id,
             last_movement_direction: Vec3::ZERO,
             action_timer: Timer::new(Duration::from_millis(50), TimerMode::Repeating),
         }

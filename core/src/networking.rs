@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{environment::EnvironmentObj, prelude::*};
 
 pub const PROTOCOL_VERSION: u32 = 0;
@@ -55,3 +57,9 @@ pub enum MsgToClient {
 
 #[derive(ByteRepr, Reflect, Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ClientId(pub u64);
+
+impl Display for ClientId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "#{}", self.0)
+    }
+}

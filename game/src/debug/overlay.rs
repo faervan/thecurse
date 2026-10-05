@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{networking::ConnectedClients, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(AppState::Game), build_overlay);
@@ -62,7 +62,8 @@ fn text_block() -> impl Scene {
 
 fn update_connection_info(
     udp: Res<Udp>,
-    con: Option<Res<ConnectionInfo>>,
+    clients: Res<ConnectedClients>,
+    character: Query<(Entity, &MainCharacter)>,
     mut text: Single<&mut Text, With<ConnectionDebugText>>,
     time: Res<Time>,
     mut timer: Local<Timer>,
@@ -73,9 +74,13 @@ fn update_connection_info(
     timer.tick(time.delta());
     if timer.just_finished() {
         text.0 = udp.debug_state();
-        if let Some(con) = con {
-            text.0.push('\n');
-            text.0.push_str(&con.debug_state());
+        text.0.push('\n');
+        if let Ok((entity, character)) = character.single() {
+            text.0
+                .push_str(&format!("You ({}), {entity}\n", character.id));
+        }
+        for (client_id, entity) in &**clients {
+            text.0.push_str(&format!("Client {client_id}, {entity}\n"));
         }
     }
 }

@@ -21,6 +21,7 @@ pub use clap::{self, Parser};
 
 pub use crate::asset_plugin;
 pub use crate::collision_layer::GameLayer;
+pub use crate::helpers;
 pub use crate::networking::{
     ClientId, MsgToClient, MsgToServer, PROTOCOL_VERSION, SERVER_TIMESTEP,
 };
