@@ -35,7 +35,6 @@ impl ConnectionInfo {
     pub fn add_action(&mut self, action: PlayerAction) {
         self.unacked_actions
             .push_back((self.next_action_id, action));
-        self.predicted_future_state.apply(action);
         self.next_action_id = self.next_action_id.wrapping_add(1);
         self.action_send_timer.almost_finish();
     }
@@ -49,7 +48,13 @@ impl ConnectionInfo {
         }
     }
 
-    pub fn ack_action(&mut self, id: u16, state: PlayerState) {
+    pub fn ack_action(
+        &mut self,
+        id: u16,
+        state: PlayerState,
+        transform: &mut Transform,
+        inner_transform: &mut Transform,
+    ) {
         if wrapping_gt(id, self.last_processed_action, u16::MAX / 2) {
             self.last_processed_action = id;
             self.authoritative_state = state;
@@ -61,13 +66,25 @@ impl ConnectionInfo {
                 self.predicted_state.apply(action);
             }
 
-            if self.authoritative_state != self.predicted_state {
+            let authoritative = Vec3::from_array(self.authoritative_state.translation);
+            let predicted = Vec3::from_array(self.predicted_state.translation);
+            let offset = authoritative - predicted;
+            if offset.length() > 0.05 {
                 debug!(
-                    "\nstate mismatch!\npredicted: {:#?}\nauthoritative: {:#?}\n",
-                    self.predicted_state, self.authoritative_state
+                    "\nstate mismatch!\npredicted: {:#?}\nauthoritative: {:#?}\ndiff: {}\n",
+                    self.predicted_state,
+                    self.authoritative_state,
+                    offset.length()
                 );
-                // TODO!
+                transform.translation += offset;
+                inner_transform.translation -= offset;
+                self.predicted_future_state = self.authoritative_state;
+                for (_, action) in &self.unacked_actions {
+                    self.predicted_future_state.apply(*action);
+                }
             }
+
+            self.predicted_state = self.authoritative_state;
         }
     }
 }

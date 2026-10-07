@@ -56,7 +56,7 @@ pub enum MsgToClient {
     },
 }
 
-#[derive(ByteRepr, Reflect, Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(ByteRepr, Reflect, Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ClientId(pub u64);
 
 impl Display for ClientId {

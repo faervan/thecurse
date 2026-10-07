@@ -3,7 +3,7 @@ use bevy::{
     window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 
-use crate::{camera::CameraControllerSettings, prelude::*};
+use crate::{camera::CameraControllerSettings, player::InnerMainCharacter, prelude::*};
 
 pub(super) fn zoom(
     mut wheel_event: MessageReader<MouseWheel>,
@@ -77,15 +77,17 @@ pub(super) fn rotate(
 }
 
 pub(super) fn follow_player(
-    player: Query<&Transform, With<MainCharacter>>,
-    mut camera: Query<&mut Transform, (With<CameraControllerAnchor>, Without<MainCharacter>)>,
+    main_character: Single<&Transform, With<MainCharacter>>,
+    inner_character: Single<&Transform, With<InnerMainCharacter>>,
+    mut camera: Single<
+        &mut Transform,
+        (
+            With<CameraControllerAnchor>,
+            Without<MainCharacter>,
+            Without<InnerMainCharacter>,
+        ),
+    >,
 ) {
-    let Ok(player_pos) = player.single() else {
-        return;
-    };
-    let Ok(mut camera_pos) = camera.single_mut() else {
-        return;
-    };
-
-    camera_pos.translation = player_pos.translation;
+    camera.translation =
+        main_character.translation + inner_character.rotation * inner_character.translation;
 }

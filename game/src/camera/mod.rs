@@ -16,12 +16,17 @@ pub(super) fn plugin(app: &mut App) {
         (
             movement::zoom,
             movement::rotate,
-            movement::follow_player,
             line_of_sight::enforce
                 .in_set(PhysicsSystems::Last)
                 .after(movement::zoom),
         )
             .run_if(in_state(Connected(true))),
+    );
+    app.add_systems(
+        PostUpdate,
+        movement::follow_player
+            .run_if(in_state(Connected(true)))
+            .before(TransformSystems::Propagate),
     );
 }
 

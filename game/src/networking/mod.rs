@@ -1,4 +1,4 @@
-use crate::{environment::rasterized_grid_obj_scene, prelude::*};
+use crate::{environment::rasterized_grid_obj_scene, player::InnerMainCharacter, prelude::*};
 
 mod action_queue;
 mod con_info;
@@ -21,13 +21,14 @@ pub(super) fn plugin(app: &mut App) {
     });
 
     app.add_systems(
-        Update,
+        FixedUpdate,
         (
             (send_ping, ConnectionInfo::send_actions).run_if(in_state(Connected(true))),
             tick_udp,
         )
             .chain()
-            .run_if(in_state(AppState::Game)),
+            .run_if(in_state(AppState::Game))
+            .in_set(PhysicsSystems::Last),
     );
 }
 
@@ -126,6 +127,10 @@ fn tick_udp(
     mut commands: Commands,
     mut connected_clients: ResMut<ConnectedClients>,
     mut con_info: Option<ResMut<ConnectionInfo>>,
+    mut main_character: Option<
+        Single<&mut Transform, (With<MainCharacter>, Without<InnerMainCharacter>)>,
+    >,
+    mut inner_characters: Option<Single<&mut Transform, With<InnerMainCharacter>>>,
     mut players: Query<&mut ScriptedPlayer>,
 ) {
     udp.com.recv();
@@ -168,8 +173,10 @@ fn tick_udp(
                         con.last_processed_action,
                         u16::MAX / 2,
                     )
+                    && let Some(transform) = &mut main_character
+                    && let Some(inner_transform) = &mut inner_characters
                 {
-                    con.ack_action(last_processed_action, state);
+                    con.ack_action(last_processed_action, state, transform, inner_transform);
                 }
             }
             MsgToClient::PlayerStateUpdate { id, state } => {
@@ -192,10 +199,12 @@ fn tick_udp(
                 let PlayerState { translation } = state;
                 let translation = Vec3::from_array(translation);
                 let entity = commands
-                    .spawn((
-                        MainCharacter::new(id),
-                        Transform::from_translation(translation),
-                    ))
+                    .spawn_scene(bsn! {
+                        @MainCharacter {
+                            id
+                        }
+                        Transform::from_translation(translation)
+                    })
                     .id();
                 debug!("Connected as {id}, {entity}");
                 commands.insert_resource(ConnectionInfo::new(id, entity, state));

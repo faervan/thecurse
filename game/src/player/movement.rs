@@ -1,9 +1,16 @@
-use dreamgame_core::{helpers::approx_eq, player::PLAYER_MOVEMENT_SPEED};
+use std::ops::Sub;
 
-use crate::prelude::*;
+use dreamgame_core::player::PLAYER_MOVEMENT_SPEED;
+
+use crate::{player::InnerMainCharacter, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(Update, movement.run_if(in_state(Connected(true))));
+    app.add_systems(
+        Update,
+        (movement, apply_translation_correction)
+            .chain()
+            .run_if(in_state(Connected(true))),
+    );
 }
 
 fn movement(
@@ -17,12 +24,15 @@ fn movement(
         return;
     };
 
-    let translation = player_pos.translation.to_array();
-    if !approx_eq(translation, con.predicted_future_state.translation) {
+    let offset = player_pos
+        .translation
+        .sub(Vec3::from_array(con.predicted_future_state.translation));
+    if offset.length() > 0.1 {
         player.action_timer.tick(time.delta());
         if player.action_timer.just_finished() {
+            con.predicted_future_state.translation = player_pos.translation.to_array();
             con.add_action(PlayerAction::Movement {
-                destination: translation,
+                offset: offset.to_array(),
             });
         }
     }
@@ -76,4 +86,15 @@ fn movement(
 
     velocity.x = direction.x;
     velocity.z = direction.z;
+}
+
+fn apply_translation_correction(
+    time: Res<Time>,
+    mut inner_character: Single<&mut Transform, With<InnerMainCharacter>>,
+) {
+    let len = inner_character.translation.length();
+    if len > 0.05 {
+        let correction = inner_character.translation * time.delta_secs() * 10.;
+        inner_character.translation -= correction.clamp_length_max(len);
+    }
 }

@@ -1,7 +1,9 @@
+use dreamgame_core::player::PLAYER_MOVEMENT_SEND_INTERVAL;
+
 use crate::prelude::*;
 
 pub mod cursor_target;
-mod movement;
+pub mod movement;
 mod scripted;
 
 const STATE_TRANSITION_DURATION: Duration =
@@ -11,21 +13,33 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((cursor_target::plugin, movement::plugin, scripted::plugin));
 }
 
-#[derive(Component, Reflect)]
+#[derive(SceneComponent, FromTemplate, Reflect)]
 #[reflect(Component)]
-#[require(Name::new("MainCharacter"), PlayerCharacter)]
 pub struct MainCharacter {
     pub id: ClientId,
     last_movement_direction: Vec3,
     action_timer: Timer,
 }
 
+#[derive(Component, Reflect, Debug, Default, Clone, Copy)]
+#[reflect(Component)]
+#[require(PlayerCharacter)]
+pub struct InnerMainCharacter;
+
 impl MainCharacter {
-    pub fn new(id: ClientId) -> Self {
-        Self {
-            id,
-            last_movement_direction: Vec3::ZERO,
-            action_timer: Timer::new(Duration::from_millis(50), TimerMode::Repeating),
+    fn scene() -> impl Scene {
+        bsn! {
+            #MainCharacter
+            MainCharacter {
+                last_movement_direction: Vec3::ZERO,
+                action_timer: Timer::new(PLAYER_MOVEMENT_SEND_INTERVAL, TimerMode::Repeating),
+            }
+            Visibility
+            Player
+            GameEntity
+            Children [
+                InnerMainCharacter
+            ]
         }
     }
 }
@@ -67,9 +81,8 @@ impl ScriptedPlayer {
     }
 }
 
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Clone, Copy)]
 #[reflect(Component)]
-#[require(Player, GameEntity)]
 #[component(on_add)]
 struct PlayerCharacter;
 

@@ -1,8 +1,19 @@
 use bevy::time::Stopwatch;
+use dreamgame_core::player::PLAYER_MOVEMENT_SEND_INTERVAL;
 
 use crate::prelude::*;
 
-pub fn plugin(_app: &mut App) {}
+pub fn plugin(app: &mut App) {
+    app.add_systems(FixedUpdate, pull_back_action_stopwatch);
+}
+
+fn pull_back_action_stopwatch(time: Res<Time>, clients: Query<&mut Client>) {
+    for mut client in clients {
+        let elapsed = client.action_stopwatch.elapsed();
+        let new = elapsed - time.delta().min(elapsed);
+        client.action_stopwatch.set_elapsed(new);
+    }
+}
 
 #[derive(Component, Debug, Clone)]
 #[component(on_add, on_despawn)]
@@ -11,10 +22,10 @@ pub struct Client {
     pub addr: SocketAddr,
     //
     pub state: PlayerState,
-    connected_since: Instant,
     action_stopwatch: Stopwatch,
     last_processed_action: u16,
     unprocessed_actions: RingBuffer<PlayerAction, 64>,
+    distance_traveled: RingBuffer<f32>,
     send_state_to_client: bool,
     broadcast_state: bool,
 }
@@ -27,10 +38,16 @@ impl Default for Client {
             state: PlayerState {
                 translation: [0.; 3],
             },
-            connected_since: Instant::now(),
             action_stopwatch: Stopwatch::new(),
             last_processed_action: u16::MAX,
             unprocessed_actions: RingBuffer::new(),
+            distance_traveled: {
+                let mut ring = RingBuffer::new();
+                for _ in 0..ring.max_len() {
+                    ring.push(0.45);
+                }
+                ring
+            },
             send_state_to_client: false,
             broadcast_state: false,
         }
@@ -87,17 +104,51 @@ impl Client {
         {
             self.last_processed_action = self.last_processed_action.wrapping_add(1);
             self.broadcast_state = true;
+            self.send_state_to_client = true;
             match action {
-                PlayerAction::Movement { destination } => {
-                    let destination = Vec3::from_array(destination);
-                    debug!(
-                        "Client #{} moved by {:.2} from {:?} to {destination:?}",
-                        self.id.0,
-                        destination.distance(transform.translation),
-                        transform.translation
+                PlayerAction::Movement { offset } => {
+                    self.action_stopwatch.tick(PLAYER_MOVEMENT_SEND_INTERVAL);
+                    if self.action_stopwatch.elapsed() > Duration::from_millis(150) {
+                        warn!(
+                            "Client {} moved too often, action_stopwatch: {:.2}s",
+                            self.id,
+                            self.action_stopwatch.elapsed().as_secs_f32()
+                        );
+                        continue;
+                    }
+                    let received_offset = Vec3::from_array(offset);
+                    let mut offset = received_offset;
+
+                    debug_assert_eq!(
+                        self.distance_traveled.len(),
+                        self.distance_traveled.max_len()
                     );
-                    transform.translation = destination;
-                    self.state.apply(action);
+                    let max_distance_sum = 0.55 * self.distance_traveled.max_len() as f32;
+
+                    let prev_distance_sum = self.distance_traveled.values().sum::<f32>();
+                    let oldest_distance = self.distance_traveled.values().next().unwrap();
+
+                    let max_offset_len = max_distance_sum - (prev_distance_sum - oldest_distance);
+                    let max_offset_len = max_offset_len.min(0.6);
+                    offset = offset.clamp_length_max(max_offset_len);
+
+                    self.distance_traveled.push(offset.length());
+                    transform.translation += offset;
+                    if offset.distance(received_offset) > 0.05 {
+                        debug!(
+                            "Client {} moved (id #{}) by {:.2} to {:.2?} - average: {:.2}, corrected by {:.2}",
+                            self.id,
+                            self.last_processed_action,
+                            offset.length(),
+                            transform.translation,
+                            self.distance_traveled.values().sum::<f32>()
+                                / self.distance_traveled.max_len() as f32,
+                            offset.distance(received_offset)
+                        );
+                    }
+                    self.state.apply(PlayerAction::Movement {
+                        offset: offset.to_array(),
+                    });
                 }
             }
         }
