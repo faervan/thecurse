@@ -115,6 +115,7 @@ impl Udp {
 fn read_udp(
     mut udp: ResMut<Udp>,
     mut commands: Commands,
+    spatial_query: SpatialQuery,
     environment: Query<(&EnvironmentObj, &Transform), Without<Client>>,
     mut players: Query<(&mut Client, &mut Transform)>,
 ) {
@@ -187,7 +188,7 @@ fn read_udp(
     );
 
     for (mut client, mut transform) in &mut players {
-        client.process_actions(&mut transform);
+        client.process_actions(&mut transform, &spatial_query);
         client.broadcast(&mut udp);
     }
 

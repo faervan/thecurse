@@ -2,11 +2,15 @@ use std::ops::Add;
 
 use crate::prelude::*;
 
+pub fn player_collider() -> Collider {
+    Collider::cuboid(0.5, 1.94, 0.2)
+}
+
 #[derive(Component, Reflect, Default, Clone, Copy)]
 #[reflect(Component)]
 #[require(
     RigidBody::Dynamic,
-    Collider::cuboid(0.5, 1.94, 0.2),
+    Collider = player_collider(),
     CollisionLayers::new(
         GameLayer::CREATURE,
         GameLayer::DEFAULT | GameLayer::ENVIRONMENT | GameLayer::DAMAGE_SOURCE,

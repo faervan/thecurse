@@ -1,4 +1,8 @@
-use crate::{environment::rasterized_grid_obj_scene, player::InnerMainCharacter, prelude::*};
+use crate::{
+    environment::{rasterized_grid_obj_scene, rock_obj_scene},
+    player::InnerMainCharacter,
+    prelude::*,
+};
 
 mod action_queue;
 mod con_info;
@@ -214,6 +218,12 @@ fn tick_udp(
                 EnvironmentObj::RasterizedGrid => {
                     commands.run_system_cached_with(
                         rasterized_grid_obj_scene.pipe(spawn_obj_scene),
+                        Vec3::from_array(translation),
+                    );
+                }
+                EnvironmentObj::Rock => {
+                    commands.run_system_cached_with(
+                        rock_obj_scene.pipe(spawn_obj_scene),
                         Vec3::from_array(translation),
                     );
                 }

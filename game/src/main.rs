@@ -63,6 +63,7 @@ fn main() {
         networking::plugin,
         player::plugin,
     ));
+
     app.run();
 }
 

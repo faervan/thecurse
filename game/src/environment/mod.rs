@@ -1,4 +1,4 @@
-use dreamgame_core::environment::RasterizedGridCollider;
+use dreamgame_core::environment::{RasterizedGridCollider, RockCollider};
 
 use crate::prelude::*;
 
@@ -70,7 +70,32 @@ pub fn rasterized_grid_obj_scene(
     })
 }
 
-pub fn point_light_obj_scene() -> Box<dyn Scene> {
+pub fn rock_obj_scene(
+    In(translation): In<Vec3>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) -> Box<dyn Scene> {
+    let mesh = meshes.add(Cuboid::new(5., 5., 5.));
+    let material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.5, 0.5, 0.1),
+        ..Default::default()
+    });
+
+    Box::new(bsn! {
+        #RockObj
+        GameEntity
+        Transform::from_translation(translation)
+        Mesh3d(mesh)
+        MeshMaterial3d::<StandardMaterial>(material)
+        Children [
+            @RockCollider
+            Transform
+            PhysicsPickable
+        ]
+    })
+}
+
+fn point_light_obj_scene() -> Box<dyn Scene> {
     Box::new(bsn! {
         #Light
         GameEntity

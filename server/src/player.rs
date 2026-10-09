@@ -1,5 +1,7 @@
+use std::sync::LazyLock;
+
 use bevy::time::Stopwatch;
-use dreamgame_core::player::PLAYER_MOVEMENT_SEND_INTERVAL;
+use dreamgame_core::player::{PLAYER_MOVEMENT_SEND_INTERVAL, player_collider};
 
 use crate::prelude::*;
 
@@ -97,7 +99,7 @@ impl Client {
         self.unprocessed_actions.insert(action_id, action);
     }
 
-    pub fn process_actions(&mut self, transform: &mut Transform) {
+    pub fn process_actions(&mut self, transform: &mut Transform, spatial_query: &SpatialQuery) {
         while let Some(action) = self
             .unprocessed_actions
             .take(self.last_processed_action.wrapping_add(1))
@@ -132,14 +134,18 @@ impl Client {
                     let max_offset_len = max_offset_len.min(0.6);
                     offset = offset.clamp_length_max(max_offset_len);
 
+                    check_movement_path(transform.translation, &mut offset, spatial_query);
+
                     self.distance_traveled.push(offset.length());
                     transform.translation += offset;
-                    if offset.distance(received_offset) > 0.05 {
+                    const MAX_INACCURACY_SQUARED: f32 = 0.05 * 0.05;
+                    if offset.distance_squared(received_offset) > MAX_INACCURACY_SQUARED {
                         debug!(
-                            "Client {} moved (id #{}) by {:.2} to {:.2?} - average: {:.2}, corrected by {:.2}",
+                            "Client {} moved (id #{}) by {:.2} to {:.2?} - average: {:.2}, \
+                            corrected by {:.2}",
                             self.id,
                             self.last_processed_action,
-                            offset.length(),
+                            received_offset.length(),
                             transform.translation,
                             self.distance_traveled.values().sum::<f32>()
                                 / self.distance_traveled.max_len() as f32,
@@ -193,5 +199,31 @@ impl Client {
 
         let mut udp = world.resource_mut::<Udp>();
         udp.broadcast_ordered(MsgToClient::PlayerDisconnected { id });
+    }
+}
+
+static PLAYER_SHAPE: LazyLock<Collider> = LazyLock::new(|| {
+    let mut c = player_collider();
+    c.set_scale(Vec3::new(0.5, 0.8, 0.5), 1);
+    c
+});
+fn check_movement_path(translation: Vec3, offset: &mut Vec3, spatial_query: &SpatialQuery) {
+    let Ok(direction) = Dir3::new(*offset) else {
+        return;
+    };
+    if let Some(hit) = spatial_query.cast_shape(
+        &PLAYER_SHAPE,
+        translation,
+        Quat::from_rotation_arc(Vec3::Y, offset.with_y(0.)),
+        direction,
+        &ShapeCastConfig {
+            max_distance: offset.length(),
+            target_distance: 0.,
+            compute_contact_on_penetration: false,
+            ignore_origin_penetration: true,
+        },
+        &SpatialQueryFilter::from_mask(GameLayer::ENVIRONMENT),
+    ) {
+        *offset = offset.clamp_length_max(hit.distance);
     }
 }
