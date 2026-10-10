@@ -35,6 +35,19 @@ fn apply_scripted_state(time: Res<Time>, players: Query<(&mut ScriptedPlayer, &m
         let diff = next - prev;
         let translation = prev + diff * player.transition_timer.fraction();
         transform.translation = translation;
+        if let Some(dir) = diff.try_normalize()
+            && dir.y < 0.95
+        {
+            let target_rotation = Quat::from_rotation_arc(Vec3::Z, dir);
+            let angle = transform.rotation.angle_between(target_rotation);
+            if angle > 0.05 {
+                transform.rotation = transform
+                    .rotation
+                    .rotate_towards(target_rotation, angle * time.delta_secs() * 20.)
+            } else {
+                transform.rotation = target_rotation;
+            }
+        }
 
         if player.transition_timer.just_finished() {
             player.transition_timer.reset();

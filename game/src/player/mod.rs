@@ -82,7 +82,8 @@ impl ScriptedPlayer {
                 next_state: None,
                 state_cache: VecDeque::new(),
                 transition_timer: Timer::new(STATE_TRANSITION_DURATION, TimerMode::Once),
-                cache_timer: Timer::new(Duration::from_millis(50), TimerMode::Once),
+                // TODO! Set cache timer dynamically?
+                cache_timer: Timer::new(Duration::from_millis(80), TimerMode::Once),
             }
             DespawnOnExit::<Connected>(Connected(true))
             Children [

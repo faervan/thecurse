@@ -223,6 +223,7 @@ fn check_movement_path(translation: Vec3, offset: &mut Vec3, spatial_query: &Spa
         },
         &SpatialQueryFilter::from_mask(GameLayer::ENVIRONMENT),
     ) {
+        debug!("hit: {hit:?}");
         *offset = offset.clamp_length_max(hit.distance);
     }
 }
