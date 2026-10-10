@@ -267,7 +267,7 @@ fn tick_udp(
 
     if let Err(e) = udp.com.send() {
         match e {
-            MiniUdpError::NotConnected => {}
+            MiniUdpError::NotConnected | MiniUdpError::ConnectionAborted(_) => {}
             _ => {
                 error!("{e}");
             }

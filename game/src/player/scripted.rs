@@ -46,9 +46,7 @@ fn apply_scripted_state(
         let diff = next - prev;
         let translation = prev + diff * player.transition_timer.fraction();
         transform.translation = translation;
-        if let Some(dir) = diff.try_normalize()
-            && dir.y < 0.95
-        {
+        if let Some(dir) = diff.with_y(0.).try_normalize() {
             let target_rotation = Quat::from_rotation_arc(Vec3::Z, dir);
             let angle = transform.rotation.angle_between(target_rotation);
             if angle > 0.05 {

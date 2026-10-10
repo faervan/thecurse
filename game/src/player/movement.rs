@@ -85,7 +85,7 @@ fn movement(
         main_character.last_movement_direction = direction;
     }
 
-    direction = (camera.rotation * direction).with_y(0.).normalize() * PLAYER_MOVEMENT_SPEED * 1.2;
+    direction = (camera.rotation * direction).with_y(0.).normalize() * PLAYER_MOVEMENT_SPEED;
 
     velocity.x = direction.x;
     velocity.z = direction.z;
