@@ -1,4 +1,7 @@
-use crate::{player::STATE_TRANSITION_DURATION, prelude::*};
+use crate::{
+    player::{STATE_TRANSITION_DURATION, animation::PlayerAnimationController},
+    prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -7,8 +10,15 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn apply_scripted_state(time: Res<Time>, players: Query<(&mut ScriptedPlayer, &mut Transform)>) {
-    for (mut player, mut transform) in players {
+fn apply_scripted_state(
+    time: Res<Time>,
+    players: Query<(
+        &mut ScriptedPlayer,
+        &mut PlayerAnimationController,
+        &mut Transform,
+    )>,
+) {
+    for (mut player, mut animation_controller, mut transform) in players {
         let next_state = if let Some(next) = player.next_state {
             next
         } else {
@@ -24,6 +34,7 @@ fn apply_scripted_state(time: Res<Time>, players: Query<(&mut ScriptedPlayer, &m
                 player.next_state = Some(next);
                 next
             } else {
+                animation_controller.set_to_idle();
                 continue;
             }
         };
@@ -49,6 +60,12 @@ fn apply_scripted_state(time: Res<Time>, players: Query<(&mut ScriptedPlayer, &m
             }
         }
 
+        const MIN_DISTANCE_SQUARED: f32 = 0.05 * 0.05;
+        match diff.length_squared() > MIN_DISTANCE_SQUARED {
+            true => animation_controller.set_to_running(),
+            false => animation_controller.set_to_idle(),
+        }
+
         if player.transition_timer.just_finished() {
             player.transition_timer.reset();
             player.last_state = next_state;
@@ -61,6 +78,7 @@ fn apply_scripted_state(time: Res<Time>, players: Query<(&mut ScriptedPlayer, &m
                     player.next_state = Some(next);
                 }
                 None => {
+                    animation_controller.set_to_idle();
                     player.next_state = None;
                 }
             }

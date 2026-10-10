@@ -2,7 +2,10 @@ use std::ops::Sub;
 
 use dreamgame_core::player::PLAYER_MOVEMENT_SPEED;
 
-use crate::{player::InnerMainCharacter, prelude::*};
+use crate::{
+    player::{InnerMainCharacter, animation::PlayerAnimationController},
+    prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -19,7 +22,7 @@ fn movement(
     mut con: ResMut<ConnectionInfo>,
     mut main_character: Single<(&mut LinearVelocity, &mut Transform, &mut MainCharacter)>,
     mut inner_main_character: Single<
-        &mut Transform,
+        (&mut Transform, &mut PlayerAnimationController),
         (With<InnerMainCharacter>, Without<MainCharacter>),
     >,
     camera: Single<
@@ -31,15 +34,16 @@ fn movement(
         ),
     >,
 ) {
-    let (velocity, player_pos, main_character) = &mut *main_character;
+    let (velocity, transform, main_character) = &mut *main_character;
+    let (inner_transform, animation_controller) = &mut *inner_main_character;
 
-    let offset = player_pos
+    let offset = transform
         .translation
         .sub(Vec3::from_array(con.predicted_future_state.translation));
     if offset.length() > 0.1 {
         main_character.action_timer.tick(time.delta());
         if main_character.action_timer.just_finished() {
-            con.predicted_future_state.translation = player_pos.translation.to_array();
+            con.predicted_future_state.translation = transform.translation.to_array();
             con.add_action(PlayerAction::Movement {
                 offset: offset.to_array(),
             });
@@ -66,16 +70,18 @@ fn movement(
             velocity.x = 0.;
             velocity.z = 0.;
         }
+        animation_controller.set_to_idle();
         return;
     }
+    animation_controller.set_to_running();
 
-    let past = player_pos.rotation;
+    let past = transform.rotation;
     let forward = Quat::from_rotation_arc(Vec3::NEG_Z, camera.translation.with_y(0.).normalize());
-    player_pos.rotation = forward;
-    player_pos.rotate_y((-direction.x).atan2(-direction.z));
+    transform.rotation = forward;
+    transform.rotate_y((-direction.x).atan2(-direction.z));
 
     if direction != main_character.last_movement_direction {
-        inner_main_character.rotation = player_pos.rotation.inverse() * past;
+        inner_transform.rotation = transform.rotation.inverse() * past;
         main_character.last_movement_direction = direction;
     }
 

@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 mod assets;
 mod camera;
+mod child_pointer;
 mod debug;
 mod environment;
 mod menu;

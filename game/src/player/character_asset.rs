@@ -10,8 +10,8 @@ pub(super) fn plugin(app: &mut App) {
 #[derive(Resource, TypePath)]
 pub(super) struct PlayerCharacterHandle {
     _scene: Handle<WorldAsset>,
-    _idle: AnimationNodeIndex,
-    _running: AnimationNodeIndex,
+    pub idle: AnimationNodeIndex,
+    pub running: AnimationNodeIndex,
     _jumping: AnimationNodeIndex,
     _falling: AnimationNodeIndex,
     _attack: AnimationNodeIndex,
@@ -81,8 +81,8 @@ fn load_player_assets(
 
     PlayerCharacterHandle {
         _scene: scene,
-        _idle: clips["Idle"],
-        _running: clips["Running"],
+        idle: clips["Idle"],
+        running: clips["Running"],
         _jumping: clips["Jumping"],
         _falling: clips["Falling"],
         _attack: clips["Attack"],

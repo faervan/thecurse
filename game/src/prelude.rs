@@ -6,6 +6,7 @@ pub use crate::GameEntity;
 pub use crate::assets::asset_loader::AssetResourceLoader as _;
 pub use crate::assets::gltf_loading::GltfAnimationExtractionExt as _;
 pub use crate::camera::{CameraController, CameraControllerAnchor};
+pub use crate::child_pointer::{ChildEntityPointer, instance_ready_insert_child_pointer};
 pub use crate::environment::spawn_obj_scene;
 pub use crate::networking::{ConnectionInfo, Udp};
 pub use crate::player::{MainCharacter, ScriptedPlayer, cursor_target::CursorTargetPosition};

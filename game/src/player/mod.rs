@@ -1,7 +1,8 @@
 use dreamgame_core::player::PLAYER_MOVEMENT_SEND_INTERVAL;
 
-use crate::prelude::*;
+use crate::{player::animation::PlayerAnimationController, prelude::*};
 
+mod animation;
 mod character_asset;
 pub mod cursor_target;
 pub mod movement;
@@ -16,6 +17,7 @@ pub(super) fn plugin(app: &mut App) {
         movement::plugin,
         scripted::plugin,
         character_asset::plugin,
+        animation::plugin,
     ));
 }
 
@@ -85,10 +87,8 @@ impl ScriptedPlayer {
                 // TODO! Set cache timer dynamically?
                 cache_timer: Timer::new(Duration::from_millis(80), TimerMode::Once),
             }
+            @PlayerCharacter
             DespawnOnExit::<Connected>(Connected(true))
-            Children [
-                @PlayerCharacter
-            ]
         }
     }
 }
@@ -102,6 +102,7 @@ impl PlayerCharacter {
         bsn! {
             #PlayerCharacter
             WorldAssetRoot("models/Player.glb#Scene0")
+            on(instance_ready_insert_child_pointer::<PlayerAnimationController>)
         }
     }
 }
