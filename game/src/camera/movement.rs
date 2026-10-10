@@ -89,5 +89,5 @@ pub(super) fn follow_player(
     >,
 ) {
     camera.translation =
-        main_character.translation + inner_character.rotation * inner_character.translation;
+        main_character.translation + main_character.rotation * inner_character.translation;
 }

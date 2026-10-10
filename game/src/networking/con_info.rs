@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{player::InnerMainCharacter, prelude::*};
 
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
@@ -53,7 +53,7 @@ impl ConnectionInfo {
         id: u16,
         state: PlayerState,
         transform: &mut Transform,
-        inner_transform: &mut Transform,
+        inner_main_character: &mut InnerMainCharacter,
     ) {
         if wrapping_gt(id, self.last_processed_action, u16::MAX / 2) {
             self.last_processed_action = id;
@@ -77,7 +77,8 @@ impl ConnectionInfo {
                     offset.length()
                 );
                 transform.translation += offset;
-                inner_transform.translation -= offset;
+                inner_main_character.translation_correction -= offset;
+
                 self.predicted_future_state = self.authoritative_state;
                 for (_, action) in &self.unacked_actions {
                     self.predicted_future_state.apply(*action);

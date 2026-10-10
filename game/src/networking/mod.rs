@@ -131,10 +131,8 @@ fn tick_udp(
     mut commands: Commands,
     mut connected_clients: ResMut<ConnectedClients>,
     mut con_info: Option<ResMut<ConnectionInfo>>,
-    mut main_character: Option<
-        Single<&mut Transform, (With<MainCharacter>, Without<InnerMainCharacter>)>,
-    >,
-    mut inner_characters: Option<Single<&mut Transform, With<InnerMainCharacter>>>,
+    mut main_character: Option<Single<&mut Transform, With<MainCharacter>>>,
+    mut inner_characters: Option<Single<&mut InnerMainCharacter>>,
     mut players: Query<&mut ScriptedPlayer>,
 ) {
     udp.com.recv();
@@ -178,9 +176,14 @@ fn tick_udp(
                         u16::MAX / 2,
                     )
                     && let Some(transform) = &mut main_character
-                    && let Some(inner_transform) = &mut inner_characters
+                    && let Some(inner_main_character) = &mut inner_characters
                 {
-                    con.ack_action(last_processed_action, state, transform, inner_transform);
+                    con.ack_action(
+                        last_processed_action,
+                        state,
+                        transform,
+                        inner_main_character,
+                    );
                 }
             }
             MsgToClient::PlayerStateUpdate { id, state } => {

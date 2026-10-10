@@ -29,7 +29,9 @@ pub struct MainCharacter {
 
 #[derive(Component, Reflect, Debug, Default, Clone, Copy)]
 #[reflect(Component)]
-pub struct InnerMainCharacter;
+pub struct InnerMainCharacter {
+    pub translation_correction: Vec3,
+}
 
 impl MainCharacter {
     fn scene() -> impl Scene {
