@@ -70,9 +70,9 @@ pub struct ScriptedPlayer {
 
 impl ScriptedPlayer {
     pub fn push_state(&mut self, server_tick_id: u16, state: PlayerState) {
-        let diff = server_tick_id.wrapping_sub(self.last_known_server_tick_id) as u32;
+        let tick_count = server_tick_id.wrapping_sub(self.last_known_server_tick_id) as u32;
         self.last_known_server_tick_id = server_tick_id;
-        self.state_cache.push_back((state, diff));
+        self.state_cache.push_back((state, tick_count));
     }
 
     fn scene() -> impl Scene {
@@ -84,6 +84,7 @@ impl ScriptedPlayer {
                 transition_timer: Timer::new(STATE_TRANSITION_DURATION, TimerMode::Once),
                 cache_timer: Timer::new(Duration::from_millis(50), TimerMode::Once),
             }
+            DespawnOnExit::<Connected>(Connected(true))
             Children [
                 @PlayerCharacter
             ]
