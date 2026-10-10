@@ -43,4 +43,8 @@ impl PlayerState {
             }
         }
     }
+
+    pub fn set_translation(&mut self, translation: Vec3) {
+        self.translation = translation.to_array();
+    }
 }

@@ -27,7 +27,7 @@ pub struct Client {
     action_stopwatch: Stopwatch,
     last_processed_action: u16,
     unprocessed_actions: RingBuffer<PlayerAction, 64>,
-    distance_traveled: RingBuffer<f32>,
+    distance_traveled: RingBuffer<f32, 8>,
     send_state_to_client: bool,
     broadcast_state: bool,
 }
@@ -152,9 +152,8 @@ impl Client {
                             offset.distance(received_offset)
                         );
                     }
-                    self.state.apply(PlayerAction::Movement {
-                        offset: offset.to_array(),
-                    });
+                    // We don't just apply the action here to prevent floating point error creep.
+                    self.state.set_translation(transform.translation);
                 }
             }
         }
@@ -214,7 +213,7 @@ fn check_movement_path(translation: Vec3, offset: &mut Vec3, spatial_query: &Spa
     if let Some(hit) = spatial_query.cast_shape(
         &PLAYER_SHAPE,
         translation,
-        Quat::from_rotation_arc(Vec3::Y, offset.with_y(0.)),
+        Quat::from_rotation_y(0.),
         direction,
         &ShapeCastConfig {
             max_distance: offset.length(),
