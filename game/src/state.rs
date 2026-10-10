@@ -1,4 +1,4 @@
-use crate::{asset_loader::all_assets_loaded, prelude::*};
+use crate::{assets::asset_loader::all_assets_loaded, prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<AppState>();

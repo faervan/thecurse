@@ -2,7 +2,7 @@ use dreamgame_core::asset_plugin;
 
 use crate::prelude::*;
 
-mod asset_loader;
+mod assets;
 mod camera;
 mod debug;
 mod environment;
@@ -57,7 +57,7 @@ fn main() {
     app.add_plugins((
         state::plugin,
         menu::plugin,
-        asset_loader::plugin,
+        assets::plugin,
         camera::plugin,
         debug::plugin,
         networking::plugin,

@@ -18,6 +18,7 @@ pub use mini_udp::{
 };
 
 pub use clap::{self, Parser};
+pub use thiserror::Error;
 
 pub use crate::asset_plugin;
 pub use crate::collision_layer::GameLayer;

@@ -281,11 +281,15 @@ fn spawn_player(
 ) {
     let translation = Vec3::from_array(state.translation);
     let entity = commands
-        .spawn((
-            Name::new(format!("Player {id}")),
-            Transform::from_translation(translation),
-            ScriptedPlayer::new(id, state, server_tick_id),
-        ))
+        .spawn_scene(bsn! {
+            @ScriptedPlayer {
+                id,
+                last_state: state,
+                last_known_server_tick_id: server_tick_id
+            }
+            Name::new(format!("Player {id}"))
+            Transform::from_translation(translation)
+        })
         .id();
     debug!("Spawning player {id} as {entity}");
     mapping.insert(id, entity);

@@ -3050,6 +3050,7 @@ dependencies = [
  "dreamgame_server",
  "futures",
  "smol",
+ "thiserror 2.0.20",
  "vleue_navigator",
 ]
 

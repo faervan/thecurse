@@ -23,7 +23,7 @@ pub struct Player;
 pub const PLAYER_MOVEMENT_SPEED: f32 = 10.;
 pub const PLAYER_MOVEMENT_SEND_INTERVAL: Duration = Duration::from_millis(50);
 
-#[derive(ByteRepr, Reflect, Debug, PartialEq, Clone, Copy)]
+#[derive(ByteRepr, Reflect, Default, Debug, PartialEq, Clone, Copy)]
 pub struct PlayerState {
     pub translation: [f32; 3],
 }
