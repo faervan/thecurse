@@ -73,7 +73,7 @@ fn update_player_animations(
                     }
                     PlayerAnimation::Running => {
                         transitions
-                            .play(&mut player, character.running, Duration::from_millis(100))
+                            .play(&mut player, character.run, Duration::from_millis(100))
                             .set_speed(MOVEMENT_ANIMATION_SPEED)
                             .repeat();
                     }

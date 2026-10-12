@@ -5,17 +5,14 @@ use crate::{
 
 pub(super) fn plugin(app: &mut App) {
     app.load_assets_with(load_player_assets);
+    app.add_systems(Update, debug_bones);
 }
 
 #[derive(Resource, TypePath)]
 pub(super) struct PlayerCharacterHandle {
     _scene: Handle<WorldAsset>,
     pub idle: AnimationNodeIndex,
-    pub running: AnimationNodeIndex,
-    _jumping: AnimationNodeIndex,
-    _falling: AnimationNodeIndex,
-    _attack: AnimationNodeIndex,
-    _attack_bottom: AnimationNodeIndex,
+    pub run: AnimationNodeIndex,
 }
 
 impl GltfAssetPath for PlayerCharacterHandle {
@@ -33,11 +30,7 @@ fn load_player_assets(
 
     let (graph, clips) = match gltf.get_animations(|get| {
         get("Idle")?;
-        get("Running")?;
-        get("Jumping")?;
-        get("Falling")?;
-        get("Attack")?;
-        get("AttackSwingBottom")?;
+        get("Run")?;
 
         Ok(())
     }) {
@@ -82,10 +75,27 @@ fn load_player_assets(
     PlayerCharacterHandle {
         _scene: scene,
         idle: clips["Idle"],
-        running: clips["Running"],
-        _jumping: clips["Jumping"],
-        _falling: clips["Falling"],
-        _attack: clips["Attack"],
-        _attack_bottom: clips["AttackSwingBottom"],
+        run: clips["Run"],
+    }
+}
+
+//
+// See <https://bevy.org/examples/animation/animation-masks/>
+//
+const MASK_GROUP_HEAD: u32 = 0;
+const MASK_GROUP_LEFT_ARM: u32 = 1;
+const MASK_GROUP_RIGHT_ARM: u32 = 2;
+const MASK_GROUP_LEGS: u32 = 3;
+
+fn debug_bones(
+    bones: Query<(Entity, &Name, Option<&Children>), Added<bevy::animation::AnimationTargetId>>,
+) {
+    if bones.count() != 0 {
+        debug!("bones: {}", bones.count());
+    }
+    for (entity, name, maybe_children) in bones {
+        if maybe_children.is_none() {
+            debug!("{name} is end of chain");
+        }
     }
 }
