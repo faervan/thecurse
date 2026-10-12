@@ -71,9 +71,16 @@ impl GltfAnimationExtractionExt for Gltf {
                 named_clips.insert(name.to_string(), clip.clone());
                 Ok(())
             }
-            None => Err(GltfAnimationExtractionError::AnimationNotFound(
-                name.to_string(),
-            )),
+            // None => Err(GltfAnimationExtractionError::AnimationNotFound(
+            //     name.to_string(),
+            // )),
+            None => {
+                named_clips.insert(
+                    name.to_string(),
+                    self.named_animations.get("Idle").unwrap().clone(),
+                );
+                Ok(())
+            }
         };
         extraction_fn(&mut getter)?;
         let (names, clips): (Vec<_>, Vec<_>) = named_clips.into_iter().unzip();

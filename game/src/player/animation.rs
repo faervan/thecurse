@@ -66,7 +66,10 @@ fn update_player_animations(
             {
                 match next {
                     PlayerAnimation::Idle => {
-                        transitions.play(&mut player, character.idle, Duration::from_millis(100));
+                        transitions
+                            .play(&mut player, character.idle, Duration::from_millis(100))
+                            .set_speed(0.5)
+                            .repeat();
                     }
                     PlayerAnimation::Running => {
                         transitions
